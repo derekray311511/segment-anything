@@ -7,7 +7,7 @@ import torch
 import torchvision
 import sys
 
-from segment_anything import sam_model_registry, SamPredictor
+from segment_anything import sam_model_registry, SamPredictor, SamAutomaticMaskGenerator
 
 print("PyTorch version:", torch.__version__)
 print("Torchvision version:", torchvision.__version__)
@@ -20,26 +20,88 @@ parser.add_argument("--img", type=str, required=True)
 parser.add_argument("--checkpoint", type=str, default="/home/ee904/DDFish/segment-anything/models/sam_vit_h_4b8939.pth")
 parser.add_argument("--device", type=str, default="cuda")
 parser.add_argument("--model_type", type=str, default="default")
+parser.add_argument(
+    "--convert-to-rle",
+    action="store_true",
+    help=(
+        "Save masks as COCO RLEs in a single json instead of as a folder of PNGs. "
+        "Requires pycocotools."
+    ),
+)
 
-def show_mask(mask, ax, random_color=False):
-    if random_color:
-        color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
-    else:
-        color = np.array([30/255, 144/255, 255/255, 0.6])
-    h, w = mask.shape[-2:]
-    mask_image = mask.reshape(h, w, 1) * color.reshape(1, 1, -1)
-    ax.imshow(mask_image)
-    
-def show_points(coords, labels, ax, marker_size=375):
-    pos_points = coords[labels==1]
-    neg_points = coords[labels==0]
-    ax.scatter(pos_points[:, 0], pos_points[:, 1], color='green', marker='*', s=marker_size, edgecolor='white', linewidth=1.25)
-    ax.scatter(neg_points[:, 0], neg_points[:, 1], color='red', marker='*', s=marker_size, edgecolor='white', linewidth=1.25)   
-    
-def show_box(box, ax):
-    x0, y0 = box[0], box[1]
-    w, h = box[2] - box[0], box[3] - box[1]
-    ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0,0,0,0), lw=2))
+amg_settings = parser.add_argument_group("AMG Settings")
+amg_settings.add_argument(
+    "--points-per-side",
+    type=int,
+    default=None,
+    help="Generate masks by sampling a grid over the image with this many points to a side.",
+)
+amg_settings.add_argument(
+    "--points-per-batch",
+    type=int,
+    default=None,
+    help="How many input points to process simultaneously in one batch.",
+)
+amg_settings.add_argument(
+    "--pred-iou-thresh",
+    type=float,
+    default=None,
+    help="Exclude masks with a predicted score from the model that is lower than this threshold.",
+)
+amg_settings.add_argument(
+    "--stability-score-thresh",
+    type=float,
+    default=None,
+    help="Exclude masks with a stability score lower than this threshold.",
+)
+amg_settings.add_argument(
+    "--stability-score-offset",
+    type=float,
+    default=None,
+    help="Larger values perturb the mask more when measuring stability score.",
+)
+amg_settings.add_argument(
+    "--box-nms-thresh",
+    type=float,
+    default=None,
+    help="The overlap threshold for excluding a duplicate mask.",
+)
+amg_settings.add_argument(
+    "--crop-n-layers",
+    type=int,
+    default=None,
+    help=(
+        "If >0, mask generation is run on smaller crops of the image to generate more masks. "
+        "The value sets how many different scales to crop at."
+    ),
+)
+amg_settings.add_argument(
+    "--crop-nms-thresh",
+    type=float,
+    default=None,
+    help="The overlap threshold for excluding duplicate masks across different crops.",
+)
+amg_settings.add_argument(
+    "--crop-overlap-ratio",
+    type=int,
+    default=None,
+    help="Larger numbers mean image crops will overlap more.",
+)
+amg_settings.add_argument(
+    "--crop-n-points-downscale-factor",
+    type=int,
+    default=None,
+    help="The number of points-per-side in each layer of crop is reduced by this factor.",
+)
+amg_settings.add_argument(
+    "--min-mask-region-area",
+    type=int,
+    default=None,
+    help=(
+        "Disconnected mask regions or holes with area smaller than this value "
+        "in pixels are removed by postprocessing."
+    ),
+)
 
 class control:
     def __init__(self) -> None:
@@ -58,6 +120,9 @@ class control:
     def mouse_callback(self, event, x, y, flags, param):
         img = param         # Get the image from the 'param' argument
         H, W = img.shape[:2]
+        circle_size = W // 300
+        thickness = W // 500
+        scale = W / 2000
 
         if self.mode == "point":
 
@@ -67,12 +132,11 @@ class control:
                 color = (255, 0, 0)
 
             if event == cv2.EVENT_MOUSEMOVE:
-                self.mouse_moving_pos(img, x, y, (W // 50), color, 2)
+                self.mouse_moving_pos(img, x, y, (W // 60), color, thickness, scale)
 
             elif event == cv2.EVENT_LBUTTONDOWN:
                 # Perform the action when the left mouse button is clicked
                 print(f"Mouse left clicked at ({x}, {y})")
-                circle_size = W // 300
                 self.click_pos.append(np.array([x, y]))
 
                 if self.prompt_type == "positive":
@@ -89,9 +153,9 @@ class control:
 
             if event == cv2.EVENT_MOUSEMOVE:
                 if not self.drawing:
-                    self.mouse_moving_pos(img, x, y, (W // 50), color, 2)
+                    self.mouse_moving_pos(img, x, y, (W // 60), color, thickness, scale)
                 else:
-                    self.mouse_rect_moving(img, x, y, (W // 50), color, 2)
+                    self.mouse_rect_moving(img, x, y, (W // 60), color, thickness, scale)
 
             elif event == cv2.EVENT_LBUTTONDOWN:
                 # Start drawing the bounding box
@@ -104,21 +168,28 @@ class control:
                 x1, y1 = self.start_point
                 x2, y2 = (x, y)
                 self.boxes.append([x1, y1, x2, y2])
-                cv2.rectangle(img, self.start_point, (x, y), color, 2)
+                cv2.rectangle(img, self.start_point, (x, y), color, thickness)
                 cv2.imshow('image', img)
+
+        elif self.mode == "auto":
+
+            color = (0, 255, 0)
+
+            if event == cv2.EVENT_MOUSEMOVE:
+                self.mouse_moving_pos(img, x, y, (W // 60), color, thickness, scale)
                     
 
-    def mouse_moving_pos(self, img, x, y, shift, color, thickness=2):
+    def mouse_moving_pos(self, img, x, y, shift, color, thickness=2, scale=0.5):
         # Display the mouse pointer coordinates on the image
         img_copy = img.copy()
-        cv2.putText(img_copy, f"({x}, {y})", (x+shift, y+shift), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, thickness)
+        cv2.putText(img_copy, f"({self.mode.upper()})-({x}, {y})", (x+shift, y+shift), cv2.FONT_HERSHEY_SIMPLEX, scale, color, thickness)
         cv2.imshow('image', img_copy)
 
-    def mouse_rect_moving(self, img, x, y, shift, color, thickness=2):
+    def mouse_rect_moving(self, img, x, y, shift, color, thickness=2, scale=0.5):
         # Update the bounding box while holding the left mouse button
         img_copy = img.copy()
-        cv2.putText(img_copy, f"({x}, {y})", (x+shift, y+shift), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, thickness)
-        cv2.rectangle(img_copy, self.start_point, (x, y), color, 2)
+        cv2.putText(img_copy, f"({self.mode.upper()})-({x}, {y})", (x+shift, y+shift), cv2.FONT_HERSHEY_SIMPLEX, scale, color, thickness)
+        cv2.rectangle(img_copy, self.start_point, (x, y), color, thickness)
         cv2.imshow('image', img_copy)
 
     def reset(self):
@@ -129,10 +200,61 @@ class control:
         self.drawing = False
         self.start_point = None
 
+class SamAutoMaskGen:
+    def __init__(self, model, args) -> None:
+        output_mode = "coco_rle" if args.convert_to_rle else "binary_mask"
+        self.amg_kwargs = self.get_amg_kwargs(args)
+        self.generator = SamAutomaticMaskGenerator(model, output_mode=output_mode, **self.amg_kwargs)
+
+    def get_amg_kwargs(self, args):
+        amg_kwargs = {
+            "points_per_side": args.points_per_side,
+            "points_per_batch": args.points_per_batch,
+            "pred_iou_thresh": args.pred_iou_thresh,
+            "stability_score_thresh": args.stability_score_thresh,
+            "stability_score_offset": args.stability_score_offset,
+            "box_nms_thresh": args.box_nms_thresh,
+            "crop_n_layers": args.crop_n_layers,
+            "crop_nms_thresh": args.crop_nms_thresh,
+            "crop_overlap_ratio": args.crop_overlap_ratio,
+            "crop_n_points_downscale_factor": args.crop_n_points_downscale_factor,
+            "min_mask_region_area": args.min_mask_region_area,
+        }
+        amg_kwargs = {k: v for k, v in amg_kwargs.items() if v is not None}
+        return amg_kwargs
+
+    def generate(self, image) -> np.ndarray:
+        masks = self.generator.generate(image)
+        np_masks = []
+        for i, mask_data in enumerate(masks):
+            mask = mask_data["segmentation"]
+            np_masks.append(mask)
+
+        return np.array(np_masks, dtype=np.float32)
+
 # Function to overlay a mask on an image
-def overlay_mask(image, mask, alpha):
+def overlay_mask(
+    image: np.ndarray, 
+    mask: np.ndarray, 
+    alpha: float, 
+    random_color: bool = False,
+) -> np.ndarray:
+    """ Draw mask on origin image
+
+    parameters:
+    image:  Origin image
+    mask:   Mask that have same size as image
+    color:  Mask's color in BGR
+    alpha:  Transparent ratio from 0.0-1.0
+
+    return:
+    blended: masked image
+    """
     # Blend the image and the mask using the alpha value
-    color = np.array([30/255, 144/255, 255/255])    # BGR
+    if random_color:
+        color = np.random.random(3)
+    else:
+        color = np.array([30/255, 144/255, 255/255])    # BGR
     h, w = mask.shape[-2:]
     mask = mask.reshape(h, w, 1) * color.reshape(1, 1, -1)
     mask *= 255 * alpha
@@ -142,16 +264,20 @@ def overlay_mask(image, mask, alpha):
 
 
 def main(args: argparse.Namespace):
-    # load img
-    BGR_origin_image = cv2.imread(args.img)
-    image = cv2.cvtColor(BGR_origin_image, cv2.COLOR_BGR2RGB)
 
     # load model
+    print("Loading model...", end="")
     device = args.device
     sam = sam_model_registry[args.model_type](checkpoint=args.checkpoint)
     sam.to(device=device)
 
     predictor = SamPredictor(sam)
+    auto_predictor = SamAutoMaskGen(sam, args)
+    print("Done")
+
+    # load img
+    BGR_origin_image = cv2.imread(args.img)
+    image = cv2.cvtColor(BGR_origin_image, cv2.COLOR_BGR2RGB)
 
     # Process the image to produce an image embedding by calling SamPredictor.set_image. 
     # SamPredictor remembers this embedding and will use it for subsequent mask prediction.
@@ -198,7 +324,10 @@ def main(args: argparse.Namespace):
             print("box mode")
             continue
         elif key == 13: # enter
-            print("Enter")
+            mouse.mode = "auto"
+            cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
+            print("Enter: Auto segmentation")
+            continue
         elif key == 32: # space
             print("SPACE: Inference")
         elif key == 27: # esc
@@ -217,7 +346,7 @@ def main(args: argparse.Namespace):
             input_label = np.array(mouse.click_label)
         if len(mouse.boxes) != 0:
             input_boxes = np.array(mouse.boxes)
-        if len(mouse.click_label) == 0 and len(mouse.boxes) == 0:
+        if len(mouse.click_label) == 0 and len(mouse.boxes) == 0 and not (mouse.mode == "auto"):
             BGR_img = BGR_origin_image.copy()
             cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
             cv2.imshow('image', BGR_img)
@@ -231,8 +360,15 @@ def main(args: argparse.Namespace):
         # For ambiguous prompts such as a single point, it is recommended to use multimask_output=True even if only a single mask is desired; 
         # the best single mask can be chosen by picking the one with the highest score returned in scores. This will often result in a better mask.
         
+        # Auto mode
+        if (mouse.mode == "auto"):
+            masks = auto_predictor.generate(image)
+            BGR_img = BGR_origin_image.copy()
+            for i in range(masks.shape[0]):
+                BGR_img = overlay_mask(BGR_img, masks[i], 0.5, random_color=True)
+
         # One object prediction
-        if (len(mouse.boxes) <= 1):
+        elif (len(mouse.boxes) <= 1):
             masks, scores, logits = predictor.predict(
                 point_coords=input_point,
                 point_labels=input_label,
@@ -245,7 +381,7 @@ def main(args: argparse.Namespace):
             max_score = scores[max_idx]
 
             # BGR image for cv2 to display
-            BGR_img = overlay_mask(BGR_origin_image, masks[max_idx], 0.5)
+            BGR_img = overlay_mask(BGR_origin_image, masks[max_idx], 0.5, random_color=False)
         
         # Multi-object prediction
         else:
@@ -259,14 +395,14 @@ def main(args: argparse.Namespace):
             )
             masks = masks.detach().cpu().numpy()
             scores = scores.detach().cpu().numpy()
-            print(masks.shape)  # (batch_size) x (num_predicted_masks_per_input) x H x W
+            print(f"output mask shape: {masks.shape}")  # (batch_size) x (num_predicted_masks_per_input) x H x W
 
             max_idx = np.argmax(scores, axis=1)
 
             # BGR image for cv2 to display
             BGR_img = BGR_origin_image.copy()
             for i in range(masks.shape[0]):
-                BGR_img = overlay_mask(BGR_img, masks[i][max_idx[i]], 0.5)
+                BGR_img = overlay_mask(BGR_img, masks[i][max_idx[i]], 0.5, random_color=True)
 
         # Set the mouse callback function for the window
         cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
@@ -274,7 +410,7 @@ def main(args: argparse.Namespace):
         # Display the image
         cv2.imshow('image', BGR_img)
 
-        # Reset input points
+        # Reset input points and boxes
         mouse.reset()
 
 
