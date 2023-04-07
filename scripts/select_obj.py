@@ -260,8 +260,35 @@ def overlay_mask(
     mask *= 255 * alpha
     mask = mask.astype(dtype=np.uint8)
     blended = cv2.add(image, mask)
+    
     return blended
+def extract_object(
+    image: np.ndarray, 
+    mask: np.ndarray, 
+) -> np.ndarray:
+    """ Draw mask on origin image
 
+    parameters:
+    image:  Origin image
+    mask:   Mask that have same size as image
+    color:  Mask's color in BGR
+    alpha:  Transparent ratio from 0.0-1.0
+
+    return:
+    blended: masked image
+    """
+    # Blend the image and the mask using the alpha value
+    if random_color:
+        color = np.random.random(3)
+    else:
+        color = np.array([30/255, 144/255, 255/255])    # BGR
+    h, w = mask.shape[-2:]
+    mask = mask.reshape(h, w, 1) * color.reshape(1, 1, -1)
+    mask *= 255 * alpha
+    mask = mask.astype(dtype=np.uint8)
+    blended = cv2.add(image, mask)
+    
+    return blended
 
 def main(args: argparse.Namespace):
 
@@ -292,13 +319,17 @@ def main(args: argparse.Namespace):
         if init:
             # Create a window to display the image
             BGR_img = BGR_origin_image.copy()
+            Object_img = np.zeros_like(BGR_origin_image)
             cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+            cv2.namedWindow('cut-object', cv2.WINDOW_NORMAL)
             # Set the initial window size (width, height)
             initial_size = (1440, 1080)
             cv2.resizeWindow('image', initial_size)
+            cv2.resizeWindow('cut-object', initial_size)
             # Init img and mouse callback
             cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
             cv2.imshow('image', BGR_img)
+            cv2.imshow('cut-object', Object_img)
             init = False
 
         # Wait for a key press
@@ -383,6 +414,7 @@ def main(args: argparse.Namespace):
             # BGR image for cv2 to display
             BGR_img = overlay_mask(BGR_origin_image, masks[max_idx], 0.5, random_color=False)
         
+            Object_img = BGR_origin_image * masks[max_idx].reshape(BGR_origin_image.shape[0],BGR_origin_image.shape[1], 1)# masks[max_idx][:, :, np.newaxis]
         # Multi-object prediction
         else:
             input_boxes = torch.tensor(input_boxes, device=predictor.device)
@@ -401,15 +433,18 @@ def main(args: argparse.Namespace):
 
             # BGR image for cv2 to display
             BGR_img = BGR_origin_image.copy()
+            merged_mask = np.zeros_like(masks[0][0])
             for i in range(masks.shape[0]):
                 BGR_img = overlay_mask(BGR_img, masks[i][max_idx[i]], 0.5, random_color=True)
-
+                merged_mask = np.bitwise_or(merged_mask, masks[i][max_idx[i]])
+                #Object_img =  cv2.add(Object_img, BGR_origin_image* masks[i][max_idx[i]].reshape(BGR_origin_image.shape[0],BGR_origin_image.shape[1], 1))# masks[max_idx][:, :, np.newaxis]
+            Object_img = BGR_origin_image * merged_mask[:, :, np.newaxis]
+             
         # Set the mouse callback function for the window
         cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
-
         # Display the image
         cv2.imshow('image', BGR_img)
-
+        cv2.imshow('cut-object', Object_img)
         # Reset input points and boxes
         mouse.reset()
 
