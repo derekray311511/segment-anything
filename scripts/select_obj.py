@@ -235,7 +235,7 @@ class SamAutoMaskGen:
             mask = mask_data["segmentation"]
             np_masks.append(mask)
 
-        return np.array(np_masks, dtype=np.float32)
+        return np.array(np_masks, dtype=bool)
 
 # Function to overlay a mask on an image
 def overlay_mask(
@@ -311,30 +311,25 @@ def main(args: argparse.Namespace):
         key = cv2.waitKey(0)
         if key == 100 or key == 83: # d
             mouse.prompt_type = "negative"
-            cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
-            print("D: Click to add negative prompt")
+            print("Click to add negative prompt")
             continue
         elif key == 97 or key == 81: # a
             mouse.prompt_type = "positive"
-            cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
-            print("A: Click to add positive prompt")
+            print("Click to add positive prompt")
             continue
         elif key == 112: # p
             mouse.mode = "point"
-            cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
             print("point mode")
             continue
         elif key == 98: # b
             mouse.mode = "box"
-            cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
             print("box mode")
             continue
         elif key == 13: # enter
             mouse.mode = "auto"
-            cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
-            print("Enter: Auto segmentation")
+            print("Auto segmentation")
             continue
-        elif key == 111: # o
+        elif key == 118: # v
             mouse.switch_view()
             if mouse.view == "masks":
                 cv2.imshow('image', Object_img)
@@ -354,14 +349,9 @@ def main(args: argparse.Namespace):
         # To select the truck, choose a point on it. 
         # Points are input to the model in (x,y) format and come with labels 1 (foreground point) or 0 (background point). 
         # Multiple points can be input; here we use only one. The chosen point will be shown as a star on the image.
-        input_point = None
-        input_label = None
-        input_boxes = None
-        if len(mouse.click_label) != 0:
-            input_point = np.array(mouse.click_pos)
-            input_label = np.array(mouse.click_label)
-        if len(mouse.boxes) != 0:
-            input_boxes = np.array(mouse.boxes)
+        input_point = np.array(mouse.click_pos) if len(mouse.click_pos) > 0 else None
+        input_label = np.array(mouse.click_label) if len(mouse.click_label) > 0 else None
+        input_boxes = np.array(mouse.boxes) if len(mouse.boxes) > 0 else None
         if len(mouse.click_label) == 0 and len(mouse.boxes) == 0 and not (mouse.mode == "auto"):
             BGR_img = BGR_origin_image.copy()
             cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
@@ -380,8 +370,11 @@ def main(args: argparse.Namespace):
         if (mouse.mode == "auto"):
             masks = auto_predictor.generate(image)
             BGR_img = BGR_origin_image.copy()
+            merged_mask = np.zeros_like(masks[0])
             for i in range(masks.shape[0]):
                 BGR_img = overlay_mask(BGR_img, masks[i], 0.5, random_color=True)
+                merged_mask = np.bitwise_or(merged_mask, masks[i])
+            Object_img = BGR_origin_image * merged_mask[:, :, np.newaxis]
 
         # One object prediction
         elif (len(mouse.boxes) <= 1):
