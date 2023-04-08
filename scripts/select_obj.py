@@ -6,6 +6,7 @@ import cv2
 import torch
 import torchvision
 import sys
+import time
 
 from segment_anything import sam_model_registry, SamPredictor, SamAutomaticMaskGenerator
 
@@ -107,6 +108,7 @@ class control:
     def __init__(self) -> None:
         # Mode
         self.mode = "point"             # use points or boxes
+        self.view = "image"             # image that show on window
         # Point parameters
         self.prompt_type = "positive"   # prompt mode
         self.click_pos = []             # x, y
@@ -191,6 +193,9 @@ class control:
         cv2.putText(img_copy, f"({self.mode.upper()})-({x}, {y})", (x+shift, y+shift), cv2.FONT_HERSHEY_SIMPLEX, scale, color, thickness)
         cv2.rectangle(img_copy, self.start_point, (x, y), color, thickness)
         cv2.imshow('image', img_copy)
+
+    def switch_view(self):
+        self.view = "image" if self.view == "masks" else "masks"
 
     def reset(self):
         self.prompt_type = "positive"
@@ -294,15 +299,12 @@ def main(args: argparse.Namespace):
             BGR_img = BGR_origin_image.copy()
             Object_img = np.zeros_like(BGR_origin_image)
             cv2.namedWindow('image', cv2.WINDOW_NORMAL)
-            cv2.namedWindow('object', cv2.WINDOW_NORMAL)
             # Set the initial window size (width, height)
             initial_size = (1440, 1080)
             cv2.resizeWindow('image', initial_size)
-            cv2.resizeWindow('object', initial_size)
             # Init img and mouse callback
             cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
             cv2.imshow('image', BGR_img)
-            cv2.imshow('object', Object_img)
             init = False
 
         # Wait for a key press
@@ -331,6 +333,16 @@ def main(args: argparse.Namespace):
             mouse.mode = "auto"
             cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
             print("Enter: Auto segmentation")
+            continue
+        elif key == 111: # o
+            mouse.switch_view()
+            if mouse.view == "masks":
+                cv2.imshow('image', Object_img)
+                cv2.setMouseCallback('image', mouse.mouse_callback, Object_img)
+            else:
+                cv2.imshow('image', BGR_img)
+                cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
+            print("Switch img/obj_img")
             continue
         elif key == 32: # space
             print("SPACE: Inference")
@@ -386,10 +398,10 @@ def main(args: argparse.Namespace):
 
             # BGR image for cv2 to display
             BGR_img = overlay_mask(BGR_origin_image, masks[max_idx], 0.5, random_color=False)
-        
             Object_img = BGR_origin_image * masks[max_idx][:, :, np.newaxis]
+
         # Multi-object prediction
-        else:
+        elif (len(mouse.boxes) > 1):
             input_boxes = torch.tensor(input_boxes, device=predictor.device)
             transformed_boxes = predictor.transform.apply_boxes_torch(input_boxes, image.shape[:2])
             masks, scores, logits = predictor.predict_torch(
@@ -416,7 +428,6 @@ def main(args: argparse.Namespace):
         cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
         # Display the image
         cv2.imshow('image', BGR_img)
-        cv2.imshow('object', Object_img)
         # Reset input points and boxes
         mouse.reset()
 
