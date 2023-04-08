@@ -118,7 +118,7 @@ class file_manager:
     def __init__(self) -> None:
         pass
 
-    def save_masked_img(
+    def save_img(
         self, 
         name: str, 
         input: np.ndarray, 
@@ -395,8 +395,8 @@ def main(args: argparse.Namespace):
             print("Switch img/obj_img")
             while True:
                 key = cv2.waitKey(0)
-                if key == ord('s'):
-                    file_man.save_masked_img(
+                if key == 115: # s
+                    file_man.save_img(
                         name=args.img,
                         input=Object_img,
                         output=args.output,
@@ -408,6 +408,12 @@ def main(args: argparse.Namespace):
             cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
             print("Switch img/obj_img")
             continue
+        elif key == 115: # s
+            file_man.save_img(
+                name=args.img,
+                input=BGR_img,
+                output=args.output,
+            )
         elif key == 32: # space
             print("SPACE: Inference")
         elif key == 27: # esc
