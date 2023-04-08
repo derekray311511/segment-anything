@@ -58,4 +58,5 @@ You can download the model checkpoints [here](https://github.com/facebookresearc
 |Negative prompt      |      d     |
 |Save image           |      s     |
 |Inference            |    SPACE   |
+|Exit                 |     ESC    |
 
