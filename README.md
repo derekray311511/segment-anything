@@ -28,7 +28,9 @@ pip install opencv-python pycocotools matplotlib onnxruntime onnx
 You can download the model checkpoints [here](https://github.com/facebookresearch/segment-anything#model-checkpoints).
 
 ## Run the model
-`python scripts/select_obj.py --img /PATH/TO/YOUR/IMG.file_type --output /OUTPUT/FILE/NAME --model_type MODEL_TYPE --checkpoint /PATH/TO/MODEL`
+```bash
+python scripts/select_obj.py --img /PATH/TO/YOUR/IMG.file_type --output /OUTPUT/FILE/NAME --model_type MODEL_TYPE --checkpoint /PATH/TO/MODEL
+```
 
 MODEL_TYPE: `vit_h`, `vit_l`, `vit_b`
 
