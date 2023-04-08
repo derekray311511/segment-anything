@@ -5,10 +5,11 @@ import argparse
 import cv2
 import torch
 import torchvision
-import sys
+import sys, os
 import time
 
 from segment_anything import sam_model_registry, SamPredictor, SamAutomaticMaskGenerator
+from typing import Any, Dict, List
 
 print("PyTorch version:", torch.__version__)
 print("Torchvision version:", torchvision.__version__)
@@ -21,6 +22,15 @@ parser.add_argument("--img", type=str, required=True)
 parser.add_argument("--checkpoint", type=str, default="/home/ee904/DDFish/segment-anything/models/sam_vit_h_4b8939.pth")
 parser.add_argument("--device", type=str, default="cuda")
 parser.add_argument("--model_type", type=str, default="default")
+parser.add_argument(
+    "--output",
+    type=str,
+    default=None, 
+    help=(
+        "Path to the directory where masks will be output. Output will be either a folder "
+        "of PNGs per image or a single json with COCO-style masks."
+    ),
+)
 parser.add_argument(
     "--convert-to-rle",
     action="store_true",
@@ -103,6 +113,34 @@ amg_settings.add_argument(
         "in pixels are removed by postprocessing."
     ),
 )
+
+class file_manager:
+    def __init__(self) -> None:
+        pass
+
+    def save_masked_img(
+        self, 
+        name: str, 
+        input: np.ndarray, 
+        output: str, 
+        ):
+        print(f"Saving '{name}'...")
+        if input is None:
+            print(f"Input is None, skipping...")
+            return
+        if output is None:
+            print(f"Output is None, skpping...")
+            return
+        
+        os.makedirs(output, exist_ok=True)
+        name = os.path.basename(name)
+        name = os.path.splitext(name)[0]
+
+        save_base = os.path.join(output, name)
+        os.makedirs(save_base, exist_ok=True)
+        filename = "0" + ".png"
+        cv2.imwrite(os.path.join(save_base, filename), input)
+        print("Done")
 
 class control:
     def __init__(self) -> None:
@@ -303,6 +341,9 @@ def main(args: argparse.Namespace):
     # SamPredictor remembers this embedding and will use it for subsequent mask prediction.
     predictor.set_image(image)
 
+    # Init file manager
+    file_man = file_manager()
+
     # Init the mouse event class
     mouse = control()
     init = True
@@ -351,6 +392,12 @@ def main(args: argparse.Namespace):
             print("Switch img/obj_img")
             while True:
                 key = cv2.waitKey(0)
+                if key == ord('s'):
+                    file_man.save_masked_img(
+                        name=args.img,
+                        input=Object_img,
+                        output=args.output,
+                    )
                 if key == 118 or key == 27: 
                     break
             mouse.switch_view()
@@ -385,15 +432,13 @@ def main(args: argparse.Namespace):
         # For ambiguous prompts such as a single point, it is recommended to use multimask_output=True even if only a single mask is desired; 
         # the best single mask can be chosen by picking the one with the highest score returned in scores. This will often result in a better mask.
         
+        masks_list = [] # Use to save and visualize
+
         # Auto mode
         if (mouse.mode == "auto"):
             masks = auto_predictor.generate(image)
-            BGR_img = BGR_origin_image.copy()
-            merged_mask = np.zeros_like(masks[0])
             for i in range(masks.shape[0]):
-                BGR_img = overlay_mask(BGR_img, masks[i], 0.5, random_color=True)
-                merged_mask = np.bitwise_or(merged_mask, masks[i])
-            Object_img = BGR_origin_image * merged_mask[:, :, np.newaxis]
+                masks_list.append(masks[i])
 
         # One object prediction
         elif (len(mouse.boxes) <= 1):
@@ -409,8 +454,7 @@ def main(args: argparse.Namespace):
             max_score = scores[max_idx]
 
             # BGR image for cv2 to display
-            BGR_img = overlay_mask(BGR_origin_image, masks[max_idx], 0.5, random_color=False)
-            Object_img = BGR_origin_image * masks[max_idx][:, :, np.newaxis]
+            masks_list.append(masks[max_idx])
 
         # Multi-object prediction
         elif (len(mouse.boxes) > 1):
@@ -429,12 +473,18 @@ def main(args: argparse.Namespace):
             max_idx = np.argmax(scores, axis=1)
 
             # BGR image for cv2 to display
-            BGR_img = BGR_origin_image.copy()
-            merged_mask = np.zeros_like(masks[0][0])
             for i in range(masks.shape[0]):
-                BGR_img = overlay_mask(BGR_img, masks[i][max_idx[i]], 0.5, random_color=True)
-                merged_mask = np.bitwise_or(merged_mask, masks[i][max_idx[i]])
-            Object_img = BGR_origin_image * merged_mask[:, :, np.newaxis]
+                masks_list.append(masks[i][max_idx[i]])
+
+        # Unify masks
+        union_mask = np.zeros_like(masks_list[0])
+        BGR_img = BGR_origin_image.copy()
+        for mask in masks_list:
+            BGR_img = overlay_mask(BGR_img, mask, 0.5, random_color=(len(masks_list) > 1))
+            union_mask = np.bitwise_or(union_mask, mask)
+
+        # Cut out objects using union mask
+        Object_img = BGR_origin_image * union_mask[:, :, np.newaxis]
              
         # Set the mouse callback function for the window
         cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
