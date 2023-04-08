@@ -108,6 +108,7 @@ class control:
     def __init__(self) -> None:
         # Mode
         self.mode = "point"             # use points or boxes
+        self.prev_mode = None           # use to return previous mode when switching view mode
         self.view = "image"             # image that show on window
         # Point parameters
         self.prompt_type = "positive"   # prompt mode
@@ -179,6 +180,13 @@ class control:
 
             if event == cv2.EVENT_MOUSEMOVE:
                 self.mouse_moving_pos(img, x, y, (W // 60), color, thickness, scale)
+
+        elif self.mode == "view":
+
+            color = (245, 183, 39)
+
+            if event == cv2.EVENT_MOUSEMOVE:
+                self.mouse_moving_pos(img, x, y, (W // 60), color, thickness, scale)
                     
 
     def mouse_moving_pos(self, img, x, y, shift, color, thickness=2, scale=0.5):
@@ -195,7 +203,14 @@ class control:
         cv2.imshow('image', img_copy)
 
     def switch_view(self):
-        self.view = "image" if self.view == "masks" else "masks"
+        if self.view == "masks":
+            self.view = "image"
+            self.mode = self.prev_mode
+
+        elif self.view == "image":
+            self.view = "masks"
+            self.prev_mode = self.mode
+            self.mode = "view"
 
     def reset(self):
         self.prompt_type = "positive"
@@ -331,12 +346,16 @@ def main(args: argparse.Namespace):
             continue
         elif key == 118: # v
             mouse.switch_view()
-            if mouse.view == "masks":
-                cv2.imshow('image', Object_img)
-                cv2.setMouseCallback('image', mouse.mouse_callback, Object_img)
-            else:
-                cv2.imshow('image', BGR_img)
-                cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
+            cv2.imshow('image', Object_img)
+            cv2.setMouseCallback('image', mouse.mouse_callback, Object_img)
+            print("Switch img/obj_img")
+            while True:
+                key = cv2.waitKey(0)
+                if key == 118 or key == 27: 
+                    break
+            mouse.switch_view()
+            cv2.imshow('image', BGR_img)
+            cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
             print("Switch img/obj_img")
             continue
         elif key == 32: # space
