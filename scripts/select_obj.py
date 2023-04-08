@@ -138,7 +138,10 @@ class file_manager:
 
         save_base = os.path.join(output, name)
         os.makedirs(save_base, exist_ok=True)
-        filename = "0" + ".png"
+        # Get the number of existing files in the save_folder
+        num_files = len([f for f in os.listdir(save_base) if os.path.isfile(os.path.join(save_base, f))])
+        # Create a unique file name based on the number of existing files
+        filename = f"{num_files}.png"
         cv2.imwrite(os.path.join(save_base, filename), input)
         print("Done")
 
