@@ -1,7 +1,10 @@
 # SAM - Local APP
 
-## DEMO video
+## DEMO video and image
 [![cv2 DEMO](https://img.youtube.com/vi/rCMvSxbb5Lc/0.jpg)](https://www.youtube.com/watch?v=rCMvSxbb5Lc)
+
+<img src="https://user-images.githubusercontent.com/84118285/230728269-493a358d-2eb5-4639-85f2-ee8bd87ecf3b.png" width="500" /><img src="https://user-images.githubusercontent.com/84118285/230728271-7ce6e1f8-311c-4da9-9de6-3eb645739895.png" width="500" />
+<img src="https://user-images.githubusercontent.com/84118285/230728272-acfb8915-95b3-439e-aec6-597c0253d91c.png" width="500" /><img src="https://user-images.githubusercontent.com/84118285/230728274-2289707d-c69f-430e-9c0c-19d9608194b7.png" width="500" />
 
 ## Installation
 The code requires `python>=3.8`, as well as `pytorch>=1.7` and `torchvision>=0.8`. Please follow the instructions [here](https://pytorch.org/get-started/locally/) to install both PyTorch and TorchVision dependencies. Installing both PyTorch and TorchVision with CUDA support is strongly recommended.
