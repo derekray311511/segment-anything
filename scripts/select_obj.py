@@ -224,7 +224,7 @@ class control:
 
         elif self.mode == "view":
 
-            color = (245, 183, 39)
+            color = (39, 183, 245)
 
             if event == cv2.EVENT_MOUSEMOVE:
                 self.mouse_moving_pos(img, x, y, (W // 60), color, thickness, scale)
