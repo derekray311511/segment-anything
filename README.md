@@ -1,15 +1,20 @@
 # SAM - Local APP
 
-## DEMO video and image
 [![cv2 DEMO](https://img.youtube.com/vi/rCMvSxbb5Lc/0.jpg)](https://www.youtube.com/watch?v=rCMvSxbb5Lc)
 
 <img src="https://user-images.githubusercontent.com/84118285/230728269-493a358d-2eb5-4639-85f2-ee8bd87ecf3b.png" width="400" /><img src="https://user-images.githubusercontent.com/84118285/230728271-7ce6e1f8-311c-4da9-9de6-3eb645739895.png" width="400" />
 <img src="https://user-images.githubusercontent.com/84118285/230728272-acfb8915-95b3-439e-aec6-597c0253d91c.png" width="400" /><img src="https://user-images.githubusercontent.com/84118285/230728274-2289707d-c69f-430e-9c0c-19d9608194b7.png" width="400" />
 
+## TODO 
+
+- [x] Release inference code and demo.
+- [ ] Undo / redo function
+- [ ] Graphical User Interface (GUI)
+
 ## Installation
 The code requires `python>=3.8`, as well as `pytorch>=1.7` and `torchvision>=0.8`. Please follow the instructions [here](https://pytorch.org/get-started/locally/) to install both PyTorch and TorchVision dependencies. Installing both PyTorch and TorchVision with CUDA support is strongly recommended.
 
-We have tested:
+We have tested the setting below on 4090, 3060ti, 1060-6G  
 `Python 3.8`
 `pytorch 2.0.0 (py3.8_cuda11.7_cudnn8.5.0_0)`
 `torchvision 0.15.0`
@@ -30,7 +35,7 @@ pip install opencv-python pycocotools matplotlib onnxruntime onnx
 ## Model Checkpoints
 You can download the model checkpoints [here](https://github.com/facebookresearch/segment-anything#model-checkpoints).
 
-## Run the model
+## Run
 ```bash
 python scripts/select_obj.py --img /PATH/TO/YOUR/IMG.file_type --output /OUTPUT/FILE/NAME --model_type MODEL_TYPE --checkpoint /PATH/TO/MODEL
 ```
