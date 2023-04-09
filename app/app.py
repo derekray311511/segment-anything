@@ -27,20 +27,68 @@ class Mode:
 
 MODE = Mode()
 
-class ImageProcessingApp:
-    def __init__(self):
+class SamAutoMaskGen:
+    def __init__(self, model, args) -> None:
+        output_mode = "coco_rle" if args.convert_to_rle else "binary_mask"
+        self.amg_kwargs = self.get_amg_kwargs(args)
+        self.generator = SamAutomaticMaskGenerator(model, output_mode=output_mode, **self.amg_kwargs)
+
+    def get_amg_kwargs(self, args):
+        amg_kwargs = {
+            "points_per_side": args.points_per_side,
+            "points_per_batch": args.points_per_batch,
+            "pred_iou_thresh": args.pred_iou_thresh,
+            "stability_score_thresh": args.stability_score_thresh,
+            "stability_score_offset": args.stability_score_offset,
+            "box_nms_thresh": args.box_nms_thresh,
+            "crop_n_layers": args.crop_n_layers,
+            "crop_nms_thresh": args.crop_nms_thresh,
+            "crop_overlap_ratio": args.crop_overlap_ratio,
+            "crop_n_points_downscale_factor": args.crop_n_points_downscale_factor,
+            "min_mask_region_area": args.min_mask_region_area,
+        }
+        amg_kwargs = {k: v for k, v in amg_kwargs.items() if v is not None}
+        return amg_kwargs
+
+    def generate(self, image) -> np.ndarray:
+        masks = self.generator.generate(image)
+        np_masks = []
+        for i, mask_data in enumerate(masks):
+            mask = mask_data["segmentation"]
+            np_masks.append(mask)
+
+        return np.array(np_masks, dtype=bool)
+
+class SAM_Web_App:
+    def __init__(self, args):
         self.app = Flask(__name__)
         CORS(self.app)
+        
+        self.args = args
+
+        # load model
+        print("Loading model...", end="")
+        device = args.device
+        sam = sam_model_registry[args.model_type](checkpoint=args.checkpoint)
+        sam.to(device=device)
+
+        self.predictor = SamPredictor(sam)
+        self.autoPredictor = SamAutoMaskGen(sam, args)
+        print("Done")
 
         # Store the image globally on the server
         self.origin_image = None
         self.processed_img = None
         self.masked_img = None
         self.imgSize = None
-        self.mode = "point"
+
+        self.mode = "point"             # point / box
+        self.promptType = "positive"    # positive / negative
 
         self.points = []
+        self.points_label = []
         self.boxes = []
+        self.masks = []
 
         self.app.route('/', methods=['GET'])(self.home)
         self.app.route('/upload_image', methods=['POST'])(self.upload_image)
@@ -63,6 +111,9 @@ class ImageProcessingApp:
         self.processed_img = image
         self.masked_img = np.zeros_like(image)
         self.imgSize = image.shape
+
+        # Create image imbedding
+        self.predictor.set_image(image, image_format="RGB")
 
         return "Uploaded image, successfully initialized"
 
@@ -92,15 +143,10 @@ class ImageProcessingApp:
         y = data['y']
         print(f'Point clicked at: {x}, {y}')
         self.points.append(np.array([x, y], dtype=np.float32))
-
-        # Info
-        info = {
-            'event': 'point_click',
-            'data': np.array([x, y])
-        }
+        self.points_label.append(1 if self.promptType == 'positive' else 0)
 
         # Process and return the image
-        return self.process_image(self.processed_img, info)
+        return f"Click at image pos {x}, {y}"
     
     def box_receive(self):
         if self.processed_img is None:
@@ -133,17 +179,118 @@ class ImageProcessingApp:
             elif (id == MODE.INFERENCE):
                 print("INFERENCE")
                 points = np.array(self.points)
+                labels = np.array(self.points_label)
                 boxes = np.array(self.boxes)
                 print(f"Points shape {points.shape}")
+                print(f"Labels shape {labels.shape}")
                 print(f"Boxes shape {boxes.shape}")
+                processed_image = self.inference(self.origin_image, points, labels, boxes)
 
         _, buffer = cv2.imencode('.jpg', processed_image)
         img_base64 = base64.b64encode(buffer).decode('utf-8')
         return jsonify({'image': img_base64})
     
+    def inference(self, image, points, labels, boxes) -> np.ndarray:
+
+        if (len(points) == len(labels) == 0):
+            points = labels = None
+        if (len(boxes) == 0):
+            boxes = None
+
+        # Auto 
+        if ((points is None) and (labels is None) and (boxes) is None):
+            masks = self.autoPredictor.generate(image)
+            for mask in masks:
+                self.masks.append(mask)
+
+        # One Object
+        elif ((boxes is not None and len(boxes) == 1) or (points is not None and len(points) > 0)):
+            masks, scores, logits = self.predictor.predict(
+                point_coords=points,
+                point_labels=labels,
+                box=boxes,
+                multimask_output=True,
+            )
+            max_idx = np.argmax(scores)
+            self.masks.append(masks[max_idx])
+
+        # Multiple Object
+        elif (boxes is not None and len(boxes) > 1):
+            boxes = torch.tensor(boxes, device=self.predictor.device)
+            transformed_boxes = self.predictor.transform.apply_boxes_torch(boxes, image.shape[:2])
+            masks, scores, logits = self.predictor.predict_torch(
+                point_coords=None,
+                point_labels=None,
+                boxes=transformed_boxes,
+                multimask_output=False,
+            )
+            masks = masks.detach().cpu().numpy()
+            scores = scores.detach().cpu().numpy()
+            max_idxs = np.argmax(scores, axis=1)
+            print(f"output mask shape: {masks.shape}")  # (batch_size) x (num_predicted_masks_per_input) x H x W
+            for i in range(masks.shape[0]):
+                self.masks.append(masks[i][max_idxs[i]])
+
+        # Update masks image to show
+        masked_image = self.updateMaskImg(self.masks)
+
+        return masked_image
+
+    def updateMaskImg(self, masks):
+        if (len(masks) == 0):
+            return
+        
+        union_mask = np.zeros_like(masks[0])
+        image = self.origin_image.copy()
+        for mask in masks:
+            image = self.overlay_mask(image, mask, 0.5, random_color=(len(masks) > 1))
+            union_mask = np.bitwise_or(union_mask, mask)
+        
+        # Cut out objects using union mask
+        masked_image = self.origin_image * union_mask[:, :, np.newaxis]
+        self.masked_img = masked_image
+        
+        return masked_image
+
+    # Function to overlay a mask on an image
+    def overlay_mask(
+        self, 
+        image: np.ndarray, 
+        mask: np.ndarray, 
+        alpha: float, 
+        random_color: bool = False,
+    ) -> np.ndarray:
+        """ Draw mask on origin image
+
+        parameters:
+        image:  Origin image
+        mask:   Mask that have same size as image
+        color:  Mask's color in BGR
+        alpha:  Transparent ratio from 0.0-1.0
+
+        return:
+        blended: masked image
+        """
+        # Blend the image and the mask using the alpha value
+        if random_color:
+            color = np.random.random(3)
+        else:
+            color = np.array([30/255, 144/255, 255/255])    # BGR
+        h, w = mask.shape[-2:]
+        mask = mask.reshape(h, w, 1) * color.reshape(1, 1, -1)
+        mask *= 255 * alpha
+        mask = mask.astype(dtype=np.uint8)
+        blended = cv2.add(image, mask)
+        
+        return blended
+    
     def reset_inputs(self):
         self.points = []
+        self.points_label = []
         self.boxes = []
+
+    def clear_masks(self):
+        self.masks = []
 
     def run(self, debug=True):
         self.app.run(debug=debug)
@@ -151,5 +298,5 @@ class ImageProcessingApp:
 
 if __name__ == '__main__':
     args = parser().parse_args()
-    app = ImageProcessingApp()
+    app = SAM_Web_App(args)
     app.run(debug=True)
