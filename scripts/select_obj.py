@@ -359,7 +359,10 @@ def main(args: argparse.Namespace):
             Object_img = np.zeros_like(BGR_origin_image)
             cv2.namedWindow('image', cv2.WINDOW_NORMAL)
             # Set the initial window size (width, height)
-            initial_size = (1440, 1080)
+            H, W = BGR_img.shape[:2]
+            r = 960 / H
+            H, W = 960, int(W * r)
+            initial_size = (W, H)
             cv2.resizeWindow('image', initial_size)
             # Init img and mouse callback
             cv2.setMouseCallback('image', mouse.mouse_callback, BGR_img)
