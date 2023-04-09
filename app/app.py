@@ -115,6 +115,10 @@ class SAM_Web_App:
         # Create image imbedding
         self.predictor.set_image(image, image_format="RGB")
 
+        # Reset inputs and masks
+        self.reset_inputs()
+        self.reset_masks()
+
         return "Uploaded image, successfully initialized"
 
     def button_click(self):
@@ -171,7 +175,9 @@ class SAM_Web_App:
                 processed_image = self.masked_img
             elif (id == MODE.CLEAR):
                 processed_image = self.origin_image
+                self.processed_img = self.origin_image
                 self.reset_inputs()
+                self.reset_masks()
             elif (id == MODE.POINT):
                 self.mode = "point"
             elif (id == MODE.BOXES):
@@ -185,6 +191,7 @@ class SAM_Web_App:
                 print(f"Labels shape {labels.shape}")
                 print(f"Boxes shape {boxes.shape}")
                 processed_image = self.inference(self.origin_image, points, labels, boxes)
+                self.processed_img = processed_image
 
         _, buffer = cv2.imencode('.jpg', processed_image)
         img_base64 = base64.b64encode(buffer).decode('utf-8')
@@ -250,7 +257,7 @@ class SAM_Web_App:
         masked_image = self.origin_image * union_mask[:, :, np.newaxis]
         self.masked_img = masked_image
         
-        return masked_image
+        return image
 
     # Function to overlay a mask on an image
     def overlay_mask(
@@ -289,8 +296,9 @@ class SAM_Web_App:
         self.points_label = []
         self.boxes = []
 
-    def clear_masks(self):
+    def reset_masks(self):
         self.masks = []
+        self.masked_img = np.zeros_like(self.origin_image)
 
     def run(self, debug=True):
         self.app.run(debug=debug)
