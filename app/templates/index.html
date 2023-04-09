@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processing App</title>
+    <style>
+        body {
+            background-color: #333;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* Change the number 3 to set the number of columns */
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="buttons">
+            <button id="button1">Image view</button>
+            <button id="button2">Masks view</button>
+            <button id="button3">Clear prompt</button>
+            <button id="button4">Point mode</button>
+            <button id="button5">Box mode</button>
+            <button id="button6">Inference</button>
+            <!-- Add more buttons as needed -->
+        </div>
+        <button id="load-image">Load Image</button>
+        <input type="file" id="input-image" accept="image/*" style="display:none">
+        <div id="image-container" style="position: relative;">
+            <img id="preview" src="#" alt="your image" style="width: auto; height: 800px; cursor: pointer;">
+        </div>
+    </div>
+    <canvas id="default-preview-canvas" width="1" height="1" style="display: none;"></canvas>
+
+    <script>
+
+        document.getElementById('preview').ondragstart = function() { return false; };
+        
+        function getDefaultDarkImageBase64() {
+            var canvas = document.getElementById('default-preview-canvas');
+            var ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/png');
+        }
+        function readURL(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#preview').attr('src', e.target.result);
+                }
+                reader.readAsDataURL(input.files[0]);
+
+                // Init server after upload image
+                var form_data = new FormData();
+                form_data.append("image", $("#input-image")[0].files[0]);
+
+                $.ajax({
+                    url: "/upload_image",
+                    type: "POST",
+                    data: form_data,
+                    contentType: false,
+                    cache: false,
+                    processData: false,
+                    success: function (response) {
+                        console.log(response);
+                    },
+                });
+            }
+        }
+        $("#preview").attr("src", getDefaultDarkImageBase64());
+
+        let mode = "point"; // Default mode is 'point', 'point'/'box'
+
+        $("#load-image").click(function() {
+            $("#input-image").trigger("click");
+        });
+
+        // Buttons
+        $("#button1").click(function() {
+            processButtonClick(1);
+        });
+        $("#button2").click(function() {
+            processButtonClick(2);
+        });
+        $("#button3").click(function() {
+            processButtonClick(3);
+            clearAllBoxes();
+            clearAllPoints();
+        });
+        $("#button4").click(function() {
+            processButtonClick(4);
+            mode = "point";
+        });
+        $("#button5").click(function() {
+            processButtonClick(5);
+            mode = "box";
+        });
+        $("#button6").click(function() {
+            processButtonClick(6);
+        });
+
+        $("#input-image").change(function() {
+            readURL(this);
+        });
+
+        // Add click event listeners for other buttons
+
+        function processButtonClick(button_id) {
+            if ($("#input-image")[0].files.length === 0) {
+                alert("Please select an image first.");
+                return;
+            }
+
+            if (button_id !== null) {
+                $.ajax({
+                    url: "/button_click",
+                    type: "POST",
+                    data: JSON.stringify({ button_id: button_id }),
+                    contentType: "application/json",
+                    success: function (response) {
+                        console.log(response);
+                        $("#preview").attr("src", "data:image/jpeg;base64," + response.image);
+                    },
+                });
+            }
+        }
+
+        // Capture mouse click position on the image
+        const points = [];
+
+        function drawPoint(x, y) {
+            const point = document.createElement("div");
+            point.style.position = "absolute";
+            point.style.width = "8px";
+            point.style.height = "8px";
+            point.style.backgroundColor = "red";
+            point.style.borderRadius = "50%";
+            point.style.left = x - 4 + "px"; // Offset by half the point size for centering
+            point.style.top = y - 4 + "px";
+            document.getElementById("image-container").appendChild(point);
+            points.push(point);
+        }
+
+        function clearAllPoints() {
+            points.forEach(point => {
+                point.remove();
+            });
+            points.length = 0;
+        }
+
+        // Point click
+        $("#preview").click(function(e) {
+            if ($("#input-image")[0].files.length === 0) {
+                alert("Please select an image first.");
+                return;
+            }
+            if (mode === "point") {
+                var imageOffset = $(this).offset();
+                var mouseX = e.pageX - imageOffset.left;
+                var mouseY = e.pageY - imageOffset.top;
+                drawPoint(mouseX, mouseY);
+                console.log("Mouse clicked at: ", mouseX, mouseY);
+                sendMouseClickPosition(mouseX, mouseY);
+            }
+        });
+        
+        $("#preview").click(function() {
+            if ($('#input-image')[0].files.length === 0 && $("#preview").attr("src") == "#") {
+                $("#input-image").trigger("click");
+            }
+        });
+
+        function sendMouseClickPosition(x, y) {
+            var img = $("#preview")[0];
+            var scaleX = img.naturalWidth / img.clientWidth;
+            var scaleY = img.naturalHeight / img.clientHeight;
+            var originalX = x * scaleX;
+            var originalY = y * scaleY;
+
+            $.ajax({
+                url: '/point_click',
+                type: 'POST',
+                data: JSON.stringify({ x: originalX, y: originalY }),
+                contentType: 'application/json',
+                success: function(response) {
+                    console.log(response);
+                    $("#preview").attr("src", "data:image/jpeg;base64," + response.image);
+                }
+            });
+        }
+
+        // For drawing bounding boxes
+        function clearAllBoxes() {
+            boxes.forEach(box => {
+                box.remove();
+            });
+            boxes.length = 0;
+            box.style.width = "0px";
+            box.style.height = "0px";
+            box.style.left = "0px";
+            box.style.top = "0px";
+            box.style.border = "none";
+        }
+        let drawing = false;
+        let startPoint = { x: 0, y: 0 };
+        const boxes = [];
+        const box = document.createElement("div");
+
+        box.style.position = "absolute";
+        box.style.pointerEvents = "none";
+        document.getElementById("image-container").appendChild(box);
+
+        function rgbToCSS(r, g, b) {
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        $("#preview").mousedown(function (e) {
+            if ($("#input-image")[0].files.length === 0) {
+                alert("Please select an image first.");
+                return;
+            }
+            if (e.which === 1 && mode === "box") { // Left mouse button
+                drawing = true;
+                startPoint.x = e.pageX - $(this).offset().left;
+                startPoint.y = e.pageY - $(this).offset().top;
+                box.style.border = "3px solid red";
+                // box.style.border = `3px solid ${rgbToCSS(22, 154, 224)}`;
+                box.style.width = "0px";
+                box.style.height = "0px";
+                box.style.left = startPoint.x + "px";
+                box.style.top = startPoint.y + "px";
+            }
+        });
+
+        $("#preview").mousemove(function (e) {
+            if (drawing && mode === "box") {
+                const currentX = e.pageX - $(this).offset().left;
+                const currentY = e.pageY - $(this).offset().top;
+                const width = currentX - startPoint.x;
+                const height = currentY - startPoint.y;
+                box.style.width = Math.abs(width) + "px";
+                box.style.height = Math.abs(height) + "px";
+                box.style.left = (width < 0 ? currentX : startPoint.x) + "px";
+                box.style.top = (height < 0 ? currentY : startPoint.y) + "px";
+            }
+        });
+
+        $("#preview").mouseup(function (e) {
+            if (drawing && mode === "box") {
+                drawing = false;
+                const endX = e.pageX - $(this).offset().left;
+                const endY = e.pageY - $(this).offset().top;
+                const coordinates = {
+                    x1: Math.min(startPoint.x, endX),
+                    y1: Math.min(startPoint.y, endY),
+                    x2: Math.max(startPoint.x, endX),
+                    y2: Math.max(startPoint.y, endY)
+                };
+                sendBoundingBoxCoordinates(coordinates);
+            }
+            if (mode === "box") {
+                // Create a new box
+                const newBox = document.createElement("div");
+                newBox.style.position = "absolute";
+                // newBox.style.border = "3px solid red";
+                newBox.style.border = `3px solid ${rgbToCSS(22, 154, 224)}`;
+                newBox.style.pointerEvents = "none";
+                newBox.style.width = box.style.width;
+                newBox.style.height = box.style.height;
+                newBox.style.left = box.style.left;
+                newBox.style.top = box.style.top;
+                document.getElementById("image-container").appendChild(newBox);
+                boxes.push(newBox);
+            }
+        });
+
+        function sendBoundingBoxCoordinates(coordinates) {
+            console.log(coordinates);
+            // Send the coordinates to the server
+            var img = $("#preview")[0];
+            var scaleX = img.naturalWidth / img.clientWidth;
+            var scaleY = img.naturalHeight / img.clientHeight;
+            $.ajax({
+                url: '/box_receive',
+                type: 'POST',
+                data: JSON.stringify({ 
+                    x1: coordinates.x1 * scaleX, y1: coordinates.y1 * scaleY, 
+                    x2: coordinates.x2 * scaleX, y2: coordinates.y2 * scaleY, 
+                }),
+                contentType: 'application/json',
+                success: function(response) {
+                    console.log(response);
+                }
+            });
+        }
+
+    </script>
+</body>
+</html>
