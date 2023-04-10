@@ -88,3 +88,14 @@ document.getElementById('prev-image').addEventListener('click', function() {
 document.getElementById('next-image').addEventListener('click', function() {
     console.log('Button next-image clicked');
 });
+
+// Mouse wheel event
+
+// For #Thumbnail-container
+function handleMouseWheelScroll(e) {
+    const thumbnailContainer = document.getElementById("thumbnail-container");
+    e.preventDefault();
+    // Scroll horizontally based on the wheelDeltaY value
+    thumbnailContainer.scrollLeft += e.deltaY * 2;
+}
+document.getElementById("thumbnail-container").addEventListener("wheel", handleMouseWheelScroll);
