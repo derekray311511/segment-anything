@@ -18,6 +18,7 @@
             overflow-y: hidden;
             max-width: 90%;
             margin-bottom: 10px;
+            margin-right: 17px;
             height: 110px;
             align-items: center;
             white-space: nowrap;
@@ -175,11 +176,14 @@
             if (!selectedThumbnail) {
                 return;
             }
-            const containerWidth = thumbnailContainer.clientWidth;
-            const thumbnailWidth = selectedThumbnail.clientWidth;
-            const thumbnailOffset = selectedThumbnail.offsetLeft;
+            const containerRect = thumbnailContainer.getBoundingClientRect();
+            const thumbnailRect = selectedThumbnail.getBoundingClientRect();
 
-            thumbnailContainer.scrollLeft = thumbnailOffset - (containerWidth / 2) - (thumbnailWidth / 3);
+            // Calculate the difference between the center of the container and the center of the selected thumbnail
+            const offsetDiff = (thumbnailRect.left + (thumbnailRect.width / 2)) - (containerRect.left + (containerRect.width / 2));
+
+            // Scroll by the difference to center the selected thumbnail
+            thumbnailContainer.scrollLeft += offsetDiff;
         }
 
         function selectThumbnail(thumbnail) {
