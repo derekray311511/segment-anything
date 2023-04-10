@@ -21,9 +21,11 @@ class Mode:
         self.IAMGE = 1
         self.MASKS = 2
         self.CLEAR = 3
-        self.POINT = 4
-        self.BOXES = 5
-        self.INFERENCE = 6
+        self.P_POINT = 4
+        self.N_POINT = 5
+        self.BOXES = 6
+        self.INFERENCE = 7
+        self.UNDO = 8
 
 MODE = Mode()
 
@@ -82,8 +84,8 @@ class SAM_Web_App:
         self.masked_img = None
         self.imgSize = None
 
-        self.mode = "point"             # point / box
-        self.promptType = "positive"    # positive / negative
+        self.mode = "p_point"           # p_point / n_point / box
+        # self.promptType = "positive"    # positive / negative
 
         self.points = []
         self.points_label = []
@@ -147,7 +149,7 @@ class SAM_Web_App:
         y = data['y']
         print(f'Point clicked at: {x}, {y}')
         self.points.append(np.array([x, y], dtype=np.float32))
-        self.points_label.append(1 if self.promptType == 'positive' else 0)
+        self.points_label.append(1 if self.mode == 'p_point' else 0)
 
         # Process and return the image
         return f"Click at image pos {x}, {y}"
@@ -178,12 +180,15 @@ class SAM_Web_App:
                 self.processed_img = self.origin_image
                 self.reset_inputs()
                 self.reset_masks()
-            elif (id == MODE.POINT):
-                self.mode = "point"
+            elif (id == MODE.P_POINT):
+                self.mode = "p_point"
+            elif (id == MODE.N_POINT):
+                self.mode = "n_point"
             elif (id == MODE.BOXES):
                 self.mode = "box"
             elif (id == MODE.INFERENCE):
                 print("INFERENCE")
+                self.reset_masks()
                 points = np.array(self.points)
                 labels = np.array(self.points_label)
                 boxes = np.array(self.boxes)
@@ -192,6 +197,8 @@ class SAM_Web_App:
                 print(f"Boxes shape {boxes.shape}")
                 processed_image = self.inference(self.origin_image, points, labels, boxes)
                 self.processed_img = processed_image
+            elif (id == MODE.UNDO):
+                print("Undo")
 
         _, buffer = cv2.imencode('.jpg', processed_image)
         img_base64 = base64.b64encode(buffer).decode('utf-8')

@@ -5,54 +5,181 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Processing App</title>
     <style>
+        #preview {
+            max-width: 100%;
+            max-height: 750px;
+            width: auto;
+        }
+
+        #thumbnail-container {
+            display: flex;
+            flex-direction: row;
+            overflow-x: scroll;
+            overflow-y: hidden;
+            max-width: 90%;
+            margin-bottom: 10px;
+            height: 110px;
+            align-items: center;
+            white-space: nowrap;
+
+            /* Custom scrollbar styles */
+            scrollbar-width: thin;
+            scrollbar-color: #777 #333;
+        }
+        .thumbnail {
+            display: inline-block;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        #thumbnail-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+            background-color: #333;
+        }
+
+        #thumbnail-container::-webkit-scrollbar-thumb {
+            background-color: #777;
+            border-radius: 4px;
+        }
+
         body {
             background-color: #333;
             color: #fff;
             display: flex;
             justify-content: center;
+            flex-direction: column;
             align-items: center;
             height: 100vh;
             margin: 0;
             font-family: Arial, sans-serif;
         }
-
         .container {
             display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
+        .buttons {
+            display: flex;
             flex-direction: column;
+            gap: 10px;
+            margin-right: 20px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-gap: 10px;
+            margin-right: 20px;
             align-items: center;
         }
 
-        .buttons {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr); /* Change the number 3 to set the number of columns */
-            gap: 10px;
-            margin-bottom: 20px;
+        button {
+            background-color: #555;
+            border: none;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            padding: 12px 24px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition-duration: 0.4s;
+        }
+
+        button:hover {
+            background-color: #777;
+            color: white;
         }
 
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
+    <div class="grid-container" id="folder-selection">
+        <button id="prev-image">Previous</button>
+        <button id="select-folder">Select Folder</button>
+        <button id="next-image">Next</button>
+        <input type="file" id="input-folder" webkitdirectory="" directory="" multiple="" style="display:none">
+    </div>
+    <div id="thumbnail-container"></div>
+
     <div class="container">
         <div class="buttons">
+            <button id="load-image">Load Image</button>
             <button id="button1">Image view</button>
             <button id="button2">Masks view</button>
             <button id="button3">Clear</button>
-            <button id="button4">Point mode</button>
-            <button id="button5">Box mode</button>
-            <button id="button6">Inference</button>
+            <button id="button4">P Point mode</button>
+            <button id="button5">N Point mode</button>
+            <button id="button6">Box mode</button>
+            <button id="button7">Inference</button>
+            <button id="button8">Undo</button>
             <!-- Add more buttons as needed -->
         </div>
-        <button id="load-image">Load Image</button>
         <input type="file" id="input-image" accept="image/*" style="display:none">
         <div id="image-container" style="position: relative;">
-            <img id="preview" src="#" alt="your image" style="width: auto; height: 800px; cursor: pointer;">
+            <img id="preview" src="#" alt="your image" style="cursor: pointer;">
         </div>
     </div>
     <canvas id="default-preview-canvas" width="1" height="1" style="display: none;"></canvas>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
     <script>
+        
+        let selectedImage = null;
+
+        // Select folder click event
+        $("#select-folder").click(function() {
+            $("#input-folder").trigger("click");
+        });
+        $("#input-folder").change(function(e) {
+            const files = e.target.files;
+            $("#thumbnail-container").empty(); // Clear the previous thumbnails
+            imageFiles = []; // Clear the previous image files
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (file.type.startsWith("image/")) { // Only process image files
+                    imageFiles.push(file);
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement("img");
+                        img.src = e.target.result;
+                        img.width = 100;
+                        img.height = 100;
+                        img.classList.add("thumbnail");
+                        img.addEventListener("click", function() {
+                            var newEvent = new CustomEvent("thumbnailClick", { detail: { file: file } });
+                            document.getElementById("input-image").dispatchEvent(newEvent);
+                        });
+                        $("#thumbnail-container").append(img);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        let imageIndex = 0;
+        let imageFiles = [];
+
+        function changeImage(delta) {
+            if (imageFiles.length === 0) {
+                alert("Please select an image folder first.");
+                return;
+            }
+            
+            imageIndex += delta;
+            if (imageIndex < 0) {
+                imageIndex = imageFiles.length - 1;
+            } else if (imageIndex >= imageFiles.length) {
+                imageIndex = 0;
+            }
+
+            const file = imageFiles[imageIndex];
+            readURL({ files: [file] });
+        }
+
 
         document.getElementById('preview').ondragstart = function() { return false; };
         
@@ -64,7 +191,11 @@
             return canvas.toDataURL('image/png');
         }
         function readURL(input) {
+            // Clear all markers when loading new image
+            clearAllBoxes();
+            clearAllPoints();
             if (input.files && input.files[0]) {
+                selectedImage = input.files[0]; // Store the selected file
                 var reader = new FileReader();
                 reader.onload = function(e) {
                     $('#preview').attr('src', e.target.result);
@@ -73,7 +204,7 @@
 
                 // Init server after upload image
                 var form_data = new FormData();
-                form_data.append("image", $("#input-image")[0].files[0]);
+                form_data.append("image", input.files[0]);
 
                 $.ajax({
                     url: "/upload_image",
@@ -90,7 +221,7 @@
         }
         $("#preview").attr("src", getDefaultDarkImageBase64());
 
-        let mode = "point"; // Default mode is 'point', 'point'/'box'
+        let mode = "p_point"; // Default mode is 'point', 'point'/'box'
 
         $("#load-image").click(function() {
             $("#input-image").trigger("click");
@@ -110,24 +241,43 @@
         });
         $("#button4").click(function() {
             processButtonClick(4);
-            mode = "point";
+            mode = "p_point";
         });
         $("#button5").click(function() {
             processButtonClick(5);
-            mode = "box";
+            mode = "n_point";
         });
         $("#button6").click(function() {
             processButtonClick(6);
+            mode = "box";
+        });
+        $("#button7").click(function() {
+            processButtonClick(7);
+        });
+        $("#button8").click(function() {
+            processButtonClick(8);
+        });
+
+        $("#prev-image").click(function() {
+            changeImage(-1);
+        });
+
+        $("#next-image").click(function() {
+            changeImage(1);
         });
 
         $("#input-image").change(function() {
             readURL(this);
         });
+        document.getElementById("input-image").addEventListener("thumbnailClick", function(e) {
+            selectedImage = e.detail.file; // Store the selected file
+            readURL({ files: [e.detail.file] });
+        });
 
         // Add click event listeners for other buttons
 
         function processButtonClick(button_id) {
-            if ($("#input-image")[0].files.length === 0) {
+            if (selectedImage === null) {
                 alert("Please select an image first.");
                 return;
             }
@@ -149,12 +299,12 @@
         // Capture mouse click position on the image
         const points = [];
 
-        function drawPoint(x, y) {
+        function drawPoint(x, y, color) {
             const point = document.createElement("div");
             point.style.position = "absolute";
             point.style.width = "8px";
             point.style.height = "8px";
-            point.style.backgroundColor = "red";
+            point.style.backgroundColor = color;
             point.style.borderRadius = "50%";
             point.style.left = x - 4 + "px"; // Offset by half the point size for centering
             point.style.top = y - 4 + "px";
@@ -171,15 +321,17 @@
 
         // Point click
         $("#preview").click(function(e) {
-            if ($("#input-image")[0].files.length === 0) {
+            if (selectedImage === null) {
                 alert("Please select an image first.");
                 return;
             }
-            if (mode === "point") {
+            if (mode === "p_point" || mode === "n_point") {
                 var imageOffset = $(this).offset();
                 var mouseX = e.pageX - imageOffset.left;
                 var mouseY = e.pageY - imageOffset.top;
-                drawPoint(mouseX, mouseY);
+                if (mode === "p_point") {var color = "red";}
+                else if (mode === "n_point") {var color = "blue";}
+                drawPoint(mouseX, mouseY, color);
                 console.log("Mouse clicked at: ", mouseX, mouseY);
                 sendMouseClickPosition(mouseX, mouseY);
             }
@@ -235,7 +387,7 @@
         }
 
         $("#preview").mousedown(function (e) {
-            if ($("#input-image")[0].files.length === 0) {
+            if (selectedImage === null) {
                 alert("Please select an image first.");
                 return;
             }

@@ -1,12 +1,24 @@
+var switch_view = 0;
 
 document.addEventListener('keydown', function(event) {
     if (event.key === '1') {
         buttonClick('button1');
+        switch_view = 0;
     } 
     else if (event.key === '2') {
         buttonClick('button2');
+        switch_view = 1;
     }
-    else if (event.key === '3') {
+    else if (event.key === 'v') {
+        if (switch_view === 0) {
+            buttonClick('button2');
+        }
+        else if (switch_view === 1) {
+            buttonClick('button1');
+        }
+        switch_view ^= 1;
+    }
+    else if (event.key === '3' || event.key === "c") {
         buttonClick('button3');
     }
     else if (event.key === '4') {
@@ -15,8 +27,20 @@ document.addEventListener('keydown', function(event) {
     else if (event.key === '5') {
         buttonClick('button5');
     }
-    else if (event.key === '6') {
+    else if (event.key === '6' || event.key === "b") {
         buttonClick('button6');
+    }
+    else if (event.key === '7' || event.key === "r") {
+        buttonClick('button7');
+    }
+    else if (event.key === '8') {
+        buttonClick('button8');
+    }
+    else if (event.key === 'ArrowLeft') {
+        buttonClick('prev-image');
+    }
+    else if (event.key === 'ArrowRight') {
+        buttonClick('next-image');
     }
 });
 
@@ -47,4 +71,20 @@ document.getElementById('button5').addEventListener('click', function() {
 
 document.getElementById('button6').addEventListener('click', function() {
     console.log('Button 6 clicked');
+});
+
+document.getElementById('button7').addEventListener('click', function() {
+    console.log('Button 7 clicked');
+});
+
+document.getElementById('button8').addEventListener('click', function() {
+    console.log('Button 8 clicked');
+});
+
+document.getElementById('prev-image').addEventListener('click', function() {
+    console.log('Button prev-image clicked');
+});
+
+document.getElementById('next-image').addEventListener('click', function() {
+    console.log('Button next-image clicked');
 });
