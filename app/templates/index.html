@@ -189,6 +189,15 @@
             }
             thumbnail.classList.add("thumbnail-selected");
             scrollToSelectedThumbnail();
+
+            // Update imageIndex based on the selected thumbnail
+            const thumbnails = document.querySelectorAll(".thumbnail");
+            for (let i = 0; i < thumbnails.length; i++) {
+                if (thumbnails[i] === thumbnail) {
+                    imageIndex = i;
+                    break;
+                }
+            }
         }
 
         let imageIndex = 0;
@@ -199,7 +208,7 @@
                 alert("Please select an image folder first.");
                 return;
             }
-            
+
             imageIndex += delta;
             if (imageIndex < 0) {
                 imageIndex = imageFiles.length - 1;
@@ -207,9 +216,8 @@
                 imageIndex = 0;
             }
 
-            const file = imageFiles[imageIndex];
-            selectThumbnail(document.querySelectorAll(".thumbnail")[imageIndex]);
-            readURL({ files: [file] });
+            const thumbnails = document.querySelectorAll(".thumbnail");
+            thumbnails[imageIndex].click(); // Trigger click event on the desired thumbnail
         }
 
 
@@ -233,15 +241,6 @@
                     $('#preview').attr('src', e.target.result);
                 }
                 reader.readAsDataURL(input.files[0]);
-
-                // for thumbnail scroll to selected image
-                const thumbnails = document.querySelectorAll(".thumbnail");
-                for (let i = 0; i < thumbnails.length; i++) {
-                    if (thumbnails[i].src === reader.result) {
-                        selectThumbnail(thumbnails[i]);
-                        break;
-                    }
-                }
 
                 // Init server after upload image
                 var form_data = new FormData();
