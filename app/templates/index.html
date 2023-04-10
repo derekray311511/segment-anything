@@ -153,8 +153,8 @@
                     reader.onload = function(e) {
                         const img = document.createElement("img");
                         img.src = e.target.result;
-                        img.width = 100;
                         img.height = 100;
+                        img.style.width = 'auto';
                         img.classList.add("thumbnail");
                         img.addEventListener("click", function() {
                             selectThumbnail(img);
@@ -220,7 +220,7 @@
             thumbnails[imageIndex].click(); // Trigger click event on the desired thumbnail
         }
 
-
+        // Disable default browser usage
         document.getElementById('preview').ondragstart = function() { return false; };
         window.addEventListener("keydown", function(e) {
             if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
