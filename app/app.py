@@ -83,9 +83,9 @@ class SAM_Web_App:
         self.processed_img = None
         self.masked_img = None
         self.imgSize = None
+        self.imgIsSet = False           # To run self.predictor.set_image() or not
 
         self.mode = "p_point"           # p_point / n_point / box
-        # self.promptType = "positive"    # positive / negative
 
         self.points = []
         self.points_label = []
@@ -115,9 +115,10 @@ class SAM_Web_App:
         self.imgSize = image.shape
 
         # Create image imbedding
-        self.predictor.set_image(image, image_format="RGB")
+        # self.predictor.set_image(image, image_format="RGB")   # Move to first inference
 
         # Reset inputs and masks
+        self.imgIsSet = False
         self.reset_inputs()
         self.reset_masks()
 
@@ -210,6 +211,12 @@ class SAM_Web_App:
             points = labels = None
         if (len(boxes) == 0):
             boxes = None
+
+        # Image is set ?
+        if self.imgIsSet == False:
+            self.predictor.set_image(image, image_format="RGB")
+            self.imgIsSet = True
+            print("Image set!")
 
         # Auto 
         if ((points is None) and (labels is None) and (boxes) is None):

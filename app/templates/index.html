@@ -6,7 +6,7 @@
     <title>Image Processing App</title>
     <style>
         #preview {
-            max-width: 100%;
+            max-width: 95%;
             max-height: 750px;
             width: auto;
         }
@@ -30,6 +30,10 @@
             display: inline-block;
             margin: 5px;
             cursor: pointer;
+        }
+        .thumbnail-selected {
+            border: 3px solid #f1c40f;
+            box-sizing: border-box;
         }
 
         #thumbnail-container::-webkit-scrollbar {
@@ -150,6 +154,7 @@
                         img.height = 100;
                         img.classList.add("thumbnail");
                         img.addEventListener("click", function() {
+                            selectThumbnail(img);
                             var newEvent = new CustomEvent("thumbnailClick", { detail: { file: file } });
                             document.getElementById("input-image").dispatchEvent(newEvent);
                         });
@@ -159,6 +164,29 @@
                 }
             }
         });
+
+        // Scroll to selected thumbnail
+        function scrollToSelectedThumbnail() {
+            const thumbnailContainer = document.getElementById("thumbnail-container");
+            const selectedThumbnail = document.querySelector(".thumbnail-selected");
+            if (!selectedThumbnail) {
+                return;
+            }
+            const containerWidth = thumbnailContainer.clientWidth;
+            const thumbnailWidth = selectedThumbnail.clientWidth;
+            const thumbnailOffset = selectedThumbnail.offsetLeft;
+
+            thumbnailContainer.scrollLeft = thumbnailOffset - (containerWidth / 2) - (thumbnailWidth / 3);
+        }
+
+        function selectThumbnail(thumbnail) {
+            const previousSelected = document.querySelector(".thumbnail-selected");
+            if (previousSelected) {
+                previousSelected.classList.remove("thumbnail-selected");
+            }
+            thumbnail.classList.add("thumbnail-selected");
+            scrollToSelectedThumbnail();
+        }
 
         let imageIndex = 0;
         let imageFiles = [];
@@ -177,6 +205,7 @@
             }
 
             const file = imageFiles[imageIndex];
+            selectThumbnail(document.querySelectorAll(".thumbnail")[imageIndex]);
             readURL({ files: [file] });
         }
 
@@ -201,6 +230,15 @@
                     $('#preview').attr('src', e.target.result);
                 }
                 reader.readAsDataURL(input.files[0]);
+
+                // for thumbnail scroll to selected image
+                const thumbnails = document.querySelectorAll(".thumbnail");
+                for (let i = 0; i < thumbnails.length; i++) {
+                    if (thumbnails[i].src === reader.result) {
+                        selectThumbnail(thumbnails[i]);
+                        break;
+                    }
+                }
 
                 // Init server after upload image
                 var form_data = new FormData();
@@ -275,7 +313,6 @@
         });
 
         // Add click event listeners for other buttons
-
         function processButtonClick(button_id) {
             if (selectedImage === null) {
                 alert("Please select an image first.");
