@@ -222,6 +222,11 @@
 
 
         document.getElementById('preview').ondragstart = function() { return false; };
+        window.addEventListener("keydown", function(e) {
+            if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
+                e.preventDefault();
+            }
+        }, false);
         
         function getDefaultDarkImageBase64() {
             var canvas = document.getElementById('default-preview-canvas');
