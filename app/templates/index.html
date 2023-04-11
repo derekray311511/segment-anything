@@ -7,7 +7,7 @@
     <style>
         #preview {
             max-width: 1700px;
-            max-height: 800px;
+            max-height: 750px;
             width: auto;
         }
         
@@ -417,23 +417,24 @@
         let zoomEnabled = false;
         const zoomContainer = document.getElementById("zoom-container");
         const zoomImage = document.getElementById("zoom-image");
+        const zoomFactor = 3; // Adjust this value to change the zoom ratio
 
         function updateZoomImage(x, y) {
             const preview = document.getElementById("preview");
-            const scaleX = preview.naturalWidth / preview.clientWidth;
-            const scaleY = preview.naturalHeight / preview.clientHeight;
+            // const scaleX = preview.naturalWidth / preview.clientWidth;
+            // const scaleY = preview.naturalHeight / preview.clientHeight;
 
-            const offsetX = x * scaleX;
-            const offsetY = y * scaleY;
+            const offsetX = x;
+            const offsetY = y;
 
-            const zoomWidth = scaleX * zoomContainer.clientWidth;
-            const zoomHeight = scaleY * zoomContainer.clientHeight;
+            const containerWidth = zoomContainer.clientWidth;
+            const containerHeight = zoomContainer.clientHeight;
 
-            zoomImage.style.width = preview.naturalWidth + "px";
-            zoomImage.style.height = preview.naturalHeight + "px";
+            zoomImage.style.width = (preview.clientWidth * zoomFactor) + "px";
+            zoomImage.style.height = (preview.clientHeight * zoomFactor) + "px";
 
-            zoomImage.style.left = (-offsetX + zoomContainer.clientWidth / 2) + "px";
-            zoomImage.style.top = (-offsetY + zoomContainer.clientHeight / 2) + "px";
+            zoomImage.style.left = (-offsetX * zoomFactor + containerWidth / 2) + "px";
+            zoomImage.style.top = (-offsetY * zoomFactor + containerHeight / 2) + "px";
         }
 
         $("#preview").mousemove(function (e) {
