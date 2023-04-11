@@ -248,9 +248,17 @@
             if (input.files && input.files[0]) {
                 selectedImage = input.files[0]; // Store the selected file
                 var reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = function (e) {
                     $('#preview').attr('src', e.target.result);
-                }
+
+                    var img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function() {
+                        // Store the original width and height
+                        $('#preview').data('originalWidth', this.width);
+                        $('#preview').data('originalHeight', this.height);
+                    }
+                };
                 reader.readAsDataURL(input.files[0]);
 
                 // Init server after upload image
@@ -359,6 +367,9 @@
             point.style.left = x - 4 + "px"; // Offset by half the point size for centering
             point.style.top = y - 4 + "px";
             document.getElementById("image-container").appendChild(point);
+            // Store the original position
+            point.dataset.originalX = x;
+            point.dataset.originalY = y;
             points.push(point);
         }
 
@@ -468,6 +479,7 @@
         });
 
         $("#preview").mouseup(function (e) {
+            var coor_temp;
             if (drawing && mode === "box") {
                 drawing = false;
                 const endX = e.pageX - $(this).offset().left;
@@ -478,6 +490,10 @@
                     x2: Math.max(startPoint.x, endX),
                     y2: Math.max(startPoint.y, endY)
                 };
+                var img = $("#preview")[0];
+                var scaleX = img.naturalWidth / img.clientWidth;
+                var scaleY = img.naturalHeight / img.clientHeight;
+                coor_temp = coordinates;
                 sendBoundingBoxCoordinates(coordinates);
             }
             if (mode === "box") {
@@ -492,6 +508,13 @@
                 newBox.style.left = box.style.left;
                 newBox.style.top = box.style.top;
                 document.getElementById("image-container").appendChild(newBox);
+                // Store the original positions and sizes
+                newBox.dataset.originalX1 = parseFloat(coor_temp.x1 * scaleX);
+                newBox.dataset.originalY1 = parseFloat(coor_temp.y1 * scaleY);
+                newBox.dataset.originalX2 = parseFloat(coor_temp.x2 * scaleX);
+                newBox.dataset.originalY2 = parseFloat(coor_temp.y2 * scaleY);
+                // Set box to invisible
+                box.style.border = "none";
                 boxes.push(newBox);
             }
         });

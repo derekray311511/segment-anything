@@ -99,3 +99,66 @@ function handleMouseWheelScroll(e) {
     thumbnailContainer.scrollLeft += e.deltaY * 2;
 }
 document.getElementById("thumbnail-container").addEventListener("wheel", handleMouseWheelScroll);
+
+// For preview zoom in / zoom out
+function handleMouseWheel(e) {
+    e.preventDefault();
+    const scaleFactor = 0.1;
+    const preview = document.getElementById("preview");
+    const container = document.getElementById("image-container");
+
+    // Calculate the new width and height
+    let newWidth = preview.clientWidth + (e.deltaY < 0 ? 1 : -1) * scaleFactor * preview.clientWidth;
+    let newHeight = preview.clientHeight + (e.deltaY < 0 ? 1 : -1) * scaleFactor * preview.clientHeight;
+
+    if (newWidth < 100 || newHeight < 100) {
+        newWidth = container.clientWidth;
+        newHeight = container.clientHeight;
+        return;
+    }
+
+    // Maintain the aspect ratio
+    const aspectRatio = preview.naturalWidth / preview.naturalHeight;
+    newHeight = newWidth / aspectRatio;
+
+    // Update the preview size
+    preview.style.width = `${newWidth}px`;
+    preview.style.height = `${newHeight}px`;
+
+    // Adjust the container scroll position to zoom in/out from the image center
+    const centerX = (container.scrollWidth - container.clientWidth) / 2;
+    const centerY = (container.scrollHeight - container.clientHeight) / 2;
+    container.scrollLeft = centerX;
+    container.scrollTop = centerY;
+    updatePointsAndBoxes()
+}
+
+document.getElementById("preview").addEventListener("wheel", handleMouseWheel);
+
+function getScalingFactor(originalWidth, originalHeight, currentWidth, currentHeight) {
+    return {
+        x: currentWidth / originalWidth,
+        y: currentHeight / originalHeight
+    };
+}
+
+function updatePointsAndBoxes() {
+    const originalWidth = $('#preview').data('originalWidth');
+    const originalHeight = $('#preview').data('originalHeight');
+    const currentWidth = $('#preview').width();
+    const currentHeight = $('#preview').height();
+
+    const scalingFactor = getScalingFactor(originalWidth, originalHeight, currentWidth, currentHeight);
+
+    points.forEach(point => {
+        point.style.left = parseFloat(point.dataset.originalX) * scalingFactor.x - 4 + 'px';
+        point.style.top = parseFloat(point.dataset.originalY) * scalingFactor.y - 4 + 'px';
+    });
+
+    boxes.forEach(box => {
+        box.style.left = parseFloat(box.dataset.originalX1) * scalingFactor.x + 'px';
+        box.style.top = parseFloat(box.dataset.originalY1) * scalingFactor.y + 'px';
+        box.style.width = (parseFloat(box.dataset.originalX2) - parseFloat(box.dataset.originalX1)) * scalingFactor.x + 'px';
+        box.style.height = (parseFloat(box.dataset.originalY2) - parseFloat(box.dataset.originalY1)) * scalingFactor.y + 'px';
+    });
+}
