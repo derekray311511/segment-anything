@@ -291,9 +291,11 @@
 
         // Buttons
         $("#button1").click(function() {
+            togglePointsAndBoxesVisibility(1);
             processButtonClick(1);
         });
         $("#button2").click(function() {
+            togglePointsAndBoxesVisibility(2);
             processButtonClick(2);
         });
         $("#button3").click(function() {
@@ -367,6 +369,7 @@
             var originalX = x * scaleX;
             var originalY = y * scaleY;
             const point = document.createElement("div");
+            point.classList.add("point");
             point.style.position = "absolute";
             point.style.width = "8px";
             point.style.height = "8px";
@@ -506,8 +509,8 @@
             if (mode === "box") {
                 // Create a new box
                 const newBox = document.createElement("div");
+                newBox.classList.add("box");
                 newBox.style.position = "absolute";
-                // newBox.style.border = "3px solid red";
                 newBox.style.border = `3px solid ${rgbToCSS(22, 154, 224)}`;
                 newBox.style.pointerEvents = "none";
                 newBox.style.width = box.style.width;

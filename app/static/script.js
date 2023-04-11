@@ -175,3 +175,27 @@ function updatePointsAndBoxes() {
         box.style.height = (parseFloat(box.dataset.originalY2) - parseFloat(box.dataset.originalY1)) * scalingFactor.y + 'px';
     });
 }
+
+function togglePointsAndBoxesVisibility(button_id) {
+    const imageContainer = document.getElementById("image-container");
+    const pointsAndBoxes = imageContainer.querySelectorAll(".point, .box");
+
+    // // switch every time we call this function
+    // pointsAndBoxes.forEach(element => {
+    //     if (element.style.display === "none") {
+    //         element.style.display = "block";
+    //     } else {
+    //         element.style.display = "none";
+    //     }
+    // });
+
+    pointsAndBoxes.forEach(element => {
+        if (button_id === 1) {
+            element.style.display = "block";
+        } 
+        else if (button_id === 2) {
+            element.style.display = "none";
+        }
+    });
+}
+
