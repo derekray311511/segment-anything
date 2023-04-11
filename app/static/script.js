@@ -108,8 +108,8 @@ function handleMouseWheel(e) {
     const container = document.getElementById("image-container");
 
     // Calculate the new width and height
-    let newWidth = preview.clientWidth + (e.deltaY < 0 ? 1 : -1) * scaleFactor * preview.clientWidth;
-    let newHeight = preview.clientHeight + (e.deltaY < 0 ? 1 : -1) * scaleFactor * preview.clientHeight;
+    let newWidth = preview.clientWidth + (e.deltaY < 0 ? 2 : -1) * scaleFactor * preview.clientWidth;
+    let newHeight = preview.clientHeight + (e.deltaY < 0 ? 2 : -1) * scaleFactor * preview.clientHeight;
 
     if (newWidth < 100 || newHeight < 100) {
         newWidth = container.clientWidth;
@@ -120,6 +120,19 @@ function handleMouseWheel(e) {
     // Maintain the aspect ratio
     const aspectRatio = preview.naturalWidth / preview.naturalHeight;
     newHeight = newWidth / aspectRatio;
+
+    // Get the computed style of the preview element and parent elements
+    const previewStyle = getComputedStyle(preview);
+    const maxWidth = previewStyle.getPropertyValue('max-width');
+    const maxHeight = previewStyle.getPropertyValue('max-height');
+    
+    // Calculate the exact max-width value in pixels
+    const maxWidthValue = parseInt(maxWidth, 10);
+    const maxHeightValue = parseInt(maxHeight, 10);
+    if (newHeight > maxHeightValue || newWidth > maxWidthValue) {
+        console.log("Return due to large size")
+        return;
+    }
 
     // Update the preview size
     preview.style.width = `${newWidth}px`;

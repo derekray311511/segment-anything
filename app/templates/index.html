@@ -6,8 +6,8 @@
     <title>Image Processing App</title>
     <style>
         #preview {
-            max-width: 95%;
-            max-height: 750px;
+            max-width: 1700px;
+            max-height: 800px;
             width: auto;
         }
 
@@ -361,6 +361,11 @@
         const points = [];
 
         function drawPoint(x, y, color) {
+            var img = $("#preview")[0];
+            var scaleX = img.naturalWidth / img.clientWidth;
+            var scaleY = img.naturalHeight / img.clientHeight;
+            var originalX = x * scaleX;
+            var originalY = y * scaleY;
             const point = document.createElement("div");
             point.style.position = "absolute";
             point.style.width = "8px";
@@ -371,8 +376,8 @@
             point.style.top = y - 4 + "px";
             document.getElementById("image-container").appendChild(point);
             // Store the original position
-            point.dataset.originalX = x;
-            point.dataset.originalY = y;
+            point.dataset.originalX = originalX;
+            point.dataset.originalY = originalY;
             points.push(point);
         }
 
@@ -460,7 +465,6 @@
                 startPoint.x = e.pageX - $(this).offset().left;
                 startPoint.y = e.pageY - $(this).offset().top;
                 box.style.border = "3px solid red";
-                // box.style.border = `3px solid ${rgbToCSS(22, 154, 224)}`;
                 box.style.width = "0px";
                 box.style.height = "0px";
                 box.style.left = startPoint.x + "px";
