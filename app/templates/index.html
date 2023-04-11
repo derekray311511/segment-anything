@@ -249,6 +249,9 @@
                 selectedImage = input.files[0]; // Store the selected file
                 var reader = new FileReader();
                 reader.onload = function (e) {
+                    const preview = document.getElementById("preview");
+                    preview.style.width = 'auto';
+                    preview.style.height = 'auto';
                     $('#preview').attr('src', e.target.result);
 
                     var img = new Image();
