@@ -10,6 +10,49 @@
             max-height: 800px;
             width: auto;
         }
+        
+        #zoom-container {
+            position: absolute;
+            overflow: hidden;
+            display: none;
+            width: 200px;
+            height: 200px;
+            z-index: 10;
+            pointer-events: none;
+            border: 2px solid #fff;
+        }
+
+        #zoom-image {
+            position: absolute;
+        }
+
+        .crosshair {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        .crosshair-line {
+            position: absolute;
+            background-color: #f1c40f;
+            pointer-events: none;
+        }
+
+        .crosshair-horizontal {
+            width: 10%;
+            height: 2px;
+            top: 50%;
+            left: 45%;
+        }
+
+        .crosshair-vertical {
+            width: 2px;
+            height: 10%;
+            left: 50%;
+            top: 45%;
+        }
 
         #thumbnail-container {
             display: flex;
@@ -126,11 +169,19 @@
             <button id="button6">Box mode</button>
             <button id="button7">Inference</button>
             <button id="button8">Undo</button>
+            <button id="toggle-zoom">Toggle Zoom</button>
             <!-- Add more buttons as needed -->
         </div>
         <input type="file" id="input-image" accept="image/*" style="display:none">
         <div id="image-container" style="position: relative;">
             <img id="preview" src="#" alt="your image" style="cursor: pointer;">
+        </div>
+    </div>
+    <div id="zoom-container">
+        <img id="zoom-image" src="#" alt="zoomed image">
+        <div class="crosshair">
+            <div class="crosshair-line crosshair-horizontal"></div>
+            <div class="crosshair-line crosshair-vertical"></div>
         </div>
     </div>
     <canvas id="default-preview-canvas" width="1" height="1" style="display: none;"></canvas>
@@ -358,6 +409,60 @@
                 });
             }
         }
+
+        // For zoom preview image
+        let zoomEnabled = false;
+        const zoomContainer = document.getElementById("zoom-container");
+        const zoomImage = document.getElementById("zoom-image");
+
+        function updateZoomImage(x, y) {
+            const preview = document.getElementById("preview");
+            const scaleX = preview.naturalWidth / preview.clientWidth;
+            const scaleY = preview.naturalHeight / preview.clientHeight;
+
+            const offsetX = x * scaleX;
+            const offsetY = y * scaleY;
+
+            const zoomWidth = scaleX * zoomContainer.clientWidth;
+            const zoomHeight = scaleY * zoomContainer.clientHeight;
+
+            zoomImage.style.width = preview.naturalWidth + "px";
+            zoomImage.style.height = preview.naturalHeight + "px";
+
+            zoomImage.style.left = (-offsetX + zoomContainer.clientWidth / 2) + "px";
+            zoomImage.style.top = (-offsetY + zoomContainer.clientHeight / 2) + "px";
+        }
+
+        $("#preview").mousemove(function (e) {
+            if (zoomEnabled) {
+                const offset = $(this).offset();
+                const mouseX = e.pageX - offset.left;
+                const mouseY = e.pageY - offset.top;
+
+                zoomContainer.style.left = (e.pageX + 10) + "px";
+                zoomContainer.style.top = (e.pageY + 10) + "px";
+
+                updateZoomImage(mouseX, mouseY);
+            }
+        });
+
+        $("#preview").mouseenter(function () {
+            if (zoomEnabled) {
+                zoomImage.src = this.src;
+                zoomContainer.style.display = "block";
+            }
+        });
+
+        $("#preview").mouseleave(function () {
+            zoomContainer.style.display = "none";
+        });
+
+        $("#toggle-zoom").click(function () {
+            zoomEnabled = !zoomEnabled;
+            if (!zoomEnabled) {
+                zoomContainer.style.display = "none";
+            }
+        });
 
         // Capture mouse click position on the image
         const points = [];
