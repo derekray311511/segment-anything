@@ -143,7 +143,7 @@ function handleMouseWheel(e) {
     const centerY = (container.scrollHeight - container.clientHeight) / 2;
     container.scrollLeft = centerX;
     container.scrollTop = centerY;
-    updatePointsAndBoxes()
+    updatePointsAndBoxes();
 }
 
 document.getElementById("preview").addEventListener("wheel", handleMouseWheel);

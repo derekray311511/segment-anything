@@ -438,6 +438,19 @@
 
             zoomImage.style.left = (-offsetX * zoomFactor + containerWidth / 2) + "px";
             zoomImage.style.top = (-offsetY * zoomFactor + containerHeight / 2) + "px";
+
+            // Update the zoom box
+            if (mode === "box" && drawing) {
+                zoomBox.style.display = "block";
+                const width = parseFloat(box.style.width);
+                const height = parseFloat(box.style.height);
+                zoomBox.style.width = (width * zoomFactor) + "px";
+                zoomBox.style.height = (height * zoomFactor) + "px";
+                zoomBox.style.left = ((parseFloat(box.style.left) - offsetX) * zoomFactor + containerWidth / 2) + "px";
+                zoomBox.style.top = ((parseFloat(box.style.top) - offsetY) * zoomFactor + containerHeight / 2) + "px";
+            } else {
+                zoomBox.style.display = "none";
+            }
         }
 
         $("#preview").mousemove(function (e) {
@@ -473,6 +486,7 @@
 
         $("#preview").mouseleave(function () {
             zoomContainer.style.display = "none";
+            zoomBox.style.display = "none";
         });
 
         $("#toggle-zoom").click(function () {
@@ -577,6 +591,14 @@
         box.style.pointerEvents = "none";
         document.getElementById("image-container").appendChild(box);
 
+        // For zoom image
+        const zoomBox = document.createElement("div");
+        zoomBox.style.position = "absolute";
+        zoomBox.style.border = "3px solid red";
+        zoomBox.style.pointerEvents = "none";
+        zoomBox.style.display = "none";
+        document.getElementById("zoom-container").appendChild(zoomBox);
+
         function rgbToCSS(r, g, b) {
             return `rgb(${r}, ${g}, ${b})`;
         }
@@ -649,6 +671,8 @@
                 // Set box to invisible
                 box.style.border = "none";
                 boxes.push(newBox);
+                // Hide zoomBox after drawing the bounding box
+                zoomBox.style.display = "none";
             }
         });
 
