@@ -117,10 +117,11 @@ class SAM_Web_App:
         # Create image imbedding
         # self.predictor.set_image(image, image_format="RGB")   # Move to first inference
 
-        # Reset inputs and masks
+        # Reset inputs and masks and image ebedding
         self.imgIsSet = False
         self.reset_inputs()
         self.reset_masks()
+        torch.cuda.empty_cache()
 
         return "Uploaded image, successfully initialized"
 
@@ -207,6 +208,7 @@ class SAM_Web_App:
     
     def inference(self, image, points, labels, boxes) -> np.ndarray:
 
+        points_len, lables_len, boxes_len = len(points), len(labels), len(boxes)
         if (len(points) == len(labels) == 0):
             points = labels = None
         if (len(boxes) == 0):
@@ -219,13 +221,13 @@ class SAM_Web_App:
             print("Image set!")
 
         # Auto 
-        if ((points is None) and (labels is None) and (boxes) is None):
+        if (points_len == boxes_len == 0):
             masks = self.autoPredictor.generate(image)
             for mask in masks:
                 self.masks.append(mask)
 
         # One Object
-        elif ((boxes is not None and len(boxes) == 1) or (points is not None and boxes is not None and len(boxes) <= 1)):
+        elif ((boxes_len == 1) or (points_len > 0 and boxes_len <= 1)):
             masks, scores, logits = self.predictor.predict(
                 point_coords=points,
                 point_labels=labels,
@@ -236,7 +238,7 @@ class SAM_Web_App:
             self.masks.append(masks[max_idx])
 
         # Multiple Object
-        elif (boxes is not None and len(boxes) > 1):
+        elif (boxes_len > 1):
             boxes = torch.tensor(boxes, device=self.predictor.device)
             transformed_boxes = self.predictor.transform.apply_boxes_torch(boxes, image.shape[:2])
             masks, scores, logits = self.predictor.predict_torch(
@@ -321,4 +323,4 @@ class SAM_Web_App:
 if __name__ == '__main__':
     args = parser().parse_args()
     app = SAM_Web_App(args)
-    app.run(debug=False)
+    app.run(debug=True)
