@@ -26,6 +26,7 @@ class Mode:
         self.BOXES = 6
         self.INFERENCE = 7
         self.UNDO = 8
+        self.COLOR_MASKS = 9
 
 MODE = Mode()
 
@@ -82,6 +83,7 @@ class SAM_Web_App:
         self.origin_image = None
         self.processed_img = None
         self.masked_img = None
+        self.colorMasks = None
         self.imgSize = None
         self.imgIsSet = False           # To run self.predictor.set_image() or not
 
@@ -112,6 +114,7 @@ class SAM_Web_App:
         self.origin_image = image
         self.processed_img = image
         self.masked_img = np.zeros_like(image)
+        self.colorMasks = np.zeros_like(image)
         self.imgSize = image.shape
 
         # Create image imbedding
@@ -177,6 +180,8 @@ class SAM_Web_App:
                 processed_image = self.processed_img
             elif (id == MODE.MASKS):
                 processed_image = self.masked_img
+            elif (id == MODE.COLOR_MASKS):
+                processed_image = self.get_colored_masks_image()
             elif (id == MODE.CLEAR):
                 processed_image = self.origin_image
                 self.processed_img = self.origin_image
@@ -307,6 +312,16 @@ class SAM_Web_App:
         
         return blended
     
+    def get_colored_masks_image(self):
+        masks = self.masks
+        image = self.colorMasks
+        if (len(masks) == 0):
+            return
+        for mask in masks:
+            image = self.overlay_mask(image, mask, 0.5, random_color=(len(masks) > 1))
+        self.colorMasks = image
+        return image
+    
     def reset_inputs(self):
         self.points = []
         self.points_label = []
@@ -315,6 +330,7 @@ class SAM_Web_App:
     def reset_masks(self):
         self.masks = []
         self.masked_img = np.zeros_like(self.origin_image)
+        self.colorMasks = np.zeros_like(self.origin_image)
 
     def run(self, debug=True):
         self.app.run(debug=debug)

@@ -167,12 +167,13 @@
             <button id="load-image">Load Image</button>
             <button id="button1">Image view</button>
             <button id="button2">Masks view</button>
-            <button id="button3">Clear</button>
+            <button id="colorMask">Color Masks</button>
             <button id="button4">P Point mode</button>
             <button id="button5">N Point mode</button>
             <button id="button6">Box mode</button>
             <button id="button7">Inference</button>
             <button id="button8">Undo</button>
+            <button id="button3">Clear</button>
             <button id="toggle-zoom">Toggle Zoom</button>
             <!-- Add more buttons as needed -->
         </div>
@@ -377,6 +378,11 @@
         });
         $("#button8").click(function() {
             processButtonClick(8);
+        });
+
+        $("#colorMask").click(function() {
+            togglePointsAndBoxesVisibility(2);
+            processButtonClick(9);
         });
 
         $("#prev-image").click(function() {
