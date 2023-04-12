@@ -34,7 +34,7 @@ document.addEventListener('keydown', function(event) {
         buttonClick('button7');
     }
     else if (event.key === '8') {
-        buttonClick('button8');
+        buttonClick('undo');
     }
     else if (event.key === 'ArrowLeft') {
         buttonClick('prev-image');
@@ -77,7 +77,7 @@ document.getElementById('button7').addEventListener('click', function() {
     console.log('Button 7 clicked');
 });
 
-document.getElementById('button8').addEventListener('click', function() {
+document.getElementById('undo').addEventListener('click', function() {
     console.log('Button 8 clicked');
 });
 

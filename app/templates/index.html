@@ -172,7 +172,7 @@
             <button id="button5">N Point mode</button>
             <button id="button6">Box mode</button>
             <button id="button7">Inference</button>
-            <button id="button8">Undo</button>
+            <button id="undo">Undo</button>
             <button id="button3">Clear</button>
             <button id="toggle-zoom">Toggle Zoom</button>
             <!-- Add more buttons as needed -->
@@ -301,6 +301,7 @@
             // Clear all markers when loading new image
             clearAllBoxes();
             clearAllPoints();
+            queue = new Deque(max_deque_len);
             if (input.files && input.files[0]) {
                 selectedImage = input.files[0]; // Store the selected file
                 var reader = new FileReader();
@@ -341,7 +342,52 @@
         }
         $("#preview").attr("src", getDefaultDarkImageBase64());
 
+        class Deque {
+            constructor(maxlen) {
+                this.items = [];
+                this.maxlen = maxlen;
+            }
+            push_left(item) {
+                if (this.items.length < this.maxlen) {
+                    this.items.unshift(item);
+                }
+                else {
+                    this.pop();
+                    this.items.unshift(item);
+                }
+            }
+            push(item) {
+                if (this.items.length < this.maxlen) {
+                    this.items.push(item);
+                }
+                else {
+                    this.pop_left();
+                    this.items.push(item);
+                }
+            }
+            pop_left() {
+                if (this.isEmpty()) {
+                    return null;
+                }
+                return this.items.shift();
+            }
+            pop() {
+                if (this.isEmpty()) {
+                    return null;
+                }
+                return this.items.pop();
+            }
+            isEmpty() {
+                return this.items.length === 0;
+            }
+            size() {
+                return this.items.length;
+            }
+        }
+
+        const max_deque_len = 1000
         let mode = "p_point"; // Default mode is 'point', 'point'/'box'
+        let queue = new Deque(max_deque_len)  // Undo / do list
 
         $("#load-image").click(function() {
             $("#input-image").trigger("click");
@@ -360,10 +406,12 @@
             processButtonClick(3);
             clearAllBoxes();
             clearAllPoints();
+            queue = new Deque(max_deque_len);
         });
         $("#button4").click(function() {
             processButtonClick(4);
             mode = "p_point";
+
         });
         $("#button5").click(function() {
             processButtonClick(5);
@@ -375,9 +423,7 @@
         });
         $("#button7").click(function() {
             processButtonClick(7);
-        });
-        $("#button8").click(function() {
-            processButtonClick(8);
+            queue.push("inference");
         });
 
         $("#colorMask").click(function() {
@@ -401,6 +447,24 @@
             readURL({ files: [e.detail.file] });
         });
 
+        $("#undo").click(function() {
+            var command = queue.pop();
+            console.log("Undo Command", command);
+            if (command === undefined) {
+                // pass
+            }
+            else if (command === "point") {
+                points.pop().remove();
+            }
+            else if (command === "box") {
+                boxes.pop().remove();
+            }
+            else if (command === "inference") {
+                // read new image from processButtonClick()
+            }
+            processButtonClick(8);
+        });
+
         // Add click event listeners for other buttons
         function processButtonClick(button_id) {
             if (selectedImage === null) {
@@ -415,7 +479,7 @@
                     data: JSON.stringify({ button_id: button_id }),
                     contentType: "application/json",
                     success: function (response) {
-                        console.log(response);
+                        // console.log(response);
                         $("#preview").attr("src", "data:image/jpeg;base64," + response.image);
                         $('#zoom-image').attr('src', "data:image/jpeg;base64," + response.image);
                     },
@@ -526,6 +590,8 @@
             point.dataset.originalX = originalX;
             point.dataset.originalY = originalY;
             points.push(point);
+            // push to queue (for undo)
+            queue.push("point");
         }
 
         function clearAllPoints() {
@@ -680,6 +746,8 @@
                 boxes.push(newBox);
                 // Hide zoomBox after drawing the bounding box
                 zoomBox.style.display = "none";
+                // push to queue (for undo)
+                queue.push("box");
             }
         });
 

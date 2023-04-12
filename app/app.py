@@ -3,6 +3,7 @@ from flask_cors import CORS
 from segment_anything import sam_model_registry, SamPredictor, SamAutomaticMaskGenerator
 from typing import Any, Dict, List
 from arg_parse import parser
+from collections import deque
 import cv2
 import numpy as np
 import io, os
@@ -88,6 +89,9 @@ class SAM_Web_App:
         self.imgIsSet = False           # To run self.predictor.set_image() or not
 
         self.mode = "p_point"           # p_point / n_point / box
+        self.curr_view = "image"
+        self.queue = deque(maxlen=1000)  # For undo list
+        self.prev_inputs = deque(maxlen=500)
 
         self.points = []
         self.points_label = []
@@ -124,6 +128,8 @@ class SAM_Web_App:
         self.imgIsSet = False
         self.reset_inputs()
         self.reset_masks()
+        self.queue.clear()
+        self.prev_inputs.clear()
         torch.cuda.empty_cache()
 
         return "Uploaded image, successfully initialized"
@@ -156,6 +162,9 @@ class SAM_Web_App:
         self.points.append(np.array([x, y], dtype=np.float32))
         self.points_label.append(1 if self.mode == 'p_point' else 0)
 
+        # Add command to queue list
+        self.queue.append("point")
+
         # Process and return the image
         return f"Click at image pos {x}, {y}"
     
@@ -169,6 +178,9 @@ class SAM_Web_App:
             data['x2'], data['y2']
         ], dtype=np.float32))
 
+        # Add command to queue list
+        self.queue.append("box")
+
         return "server received boxes"
 
     def process_image(self, image, info):
@@ -177,16 +189,21 @@ class SAM_Web_App:
         if info['event'] == 'button_click':
             id = info['data']
             if (id == MODE.IAMGE):
+                self.curr_view = "image"
                 processed_image = self.processed_img
             elif (id == MODE.MASKS):
+                self.curr_view = "masks"
                 processed_image = self.masked_img
             elif (id == MODE.COLOR_MASKS):
+                self.curr_view = "colorMasks"
                 processed_image = self.colorMasks
             elif (id == MODE.CLEAR):
                 processed_image = self.origin_image
                 self.processed_img = self.origin_image
                 self.reset_inputs()
-                self.reset_masks()
+                self.reset_masks()  
+                self.queue.clear()
+                self.prev_inputs.clear()
             elif (id == MODE.P_POINT):
                 self.mode = "p_point"
             elif (id == MODE.N_POINT):
@@ -195,18 +212,58 @@ class SAM_Web_App:
                 self.mode = "box"
             elif (id == MODE.INFERENCE):
                 print("INFERENCE")
-                self.reset_masks()
+                # self.reset_masks()
                 points = np.array(self.points)
                 labels = np.array(self.points_label)
                 boxes = np.array(self.boxes)
                 print(f"Points shape {points.shape}")
                 print(f"Labels shape {labels.shape}")
                 print(f"Boxes shape {boxes.shape}")
+                prev_masks_len = len(self.masks)
                 processed_image = self.inference(self.origin_image, points, labels, boxes)
+                curr_masks_len = len(self.masks)
                 self.get_colored_masks_image()
                 self.processed_img = processed_image
+                self.prev_inputs.append({
+                    "points": self.points,
+                    "labels": self.points_label,
+                    "boxes": self.boxes
+                })
+                self.reset_inputs()
+                self.queue.append(f"inference-{curr_masks_len - prev_masks_len}")
             elif (id == MODE.UNDO):
-                print("Undo")
+                if len(self.queue) != 0:
+                    command = self.queue.pop()
+                    command = command.split('-')
+                else:
+                    command = None
+                print(f"Undo {command}")
+
+                if command is None:
+                    pass
+                elif command[0] == "point":
+                    self.points.pop()
+                    self.points_label.pop()
+                elif command[0] == "box":
+                    self.boxes.pop()
+                elif command[0] == "inference":
+                    # Calculate masks and image again
+                    val = command[1]
+                    self.masks = self.masks[:(len(self.masks) - int(val))]
+                    self.processed_img = self.updateMaskImg(self.masks)
+                    self.get_colored_masks_image()
+                    if self.curr_view == "masks":
+                        processed_image = self.masked_img
+                    elif self.curr_view == "colorMasks":
+                        processed_image = self.colorMasks
+                    else:   # self.curr_view == "image":
+                        processed_image = self.processed_img
+
+                    # Load prev inputs
+                    prev_inputs = self.prev_inputs.pop()
+                    self.points = prev_inputs["points"]
+                    self.points_label = prev_inputs["labels"]
+                    self.boxes = prev_inputs["boxes"]
 
         _, buffer = cv2.imencode('.jpg', processed_image)
         img_base64 = base64.b64encode(buffer).decode('utf-8')
@@ -266,11 +323,14 @@ class SAM_Web_App:
         return masked_image
 
     def updateMaskImg(self, masks):
+        image = self.origin_image.copy()
+
         if (len(masks) == 0):
-            return
+            self.masked_img = np.zeros_like(image)
+            return image
         
         union_mask = np.zeros_like(masks[0])
-        image = self.origin_image.copy()
+        np.random.seed(0)
         for mask in masks:
             image = self.overlay_mask(image, mask, 0.5, random_color=(len(masks) > 1))
             union_mask = np.bitwise_or(union_mask, mask)
@@ -315,9 +375,10 @@ class SAM_Web_App:
     
     def get_colored_masks_image(self):
         masks = self.masks
-        image = self.colorMasks
+        image = np.zeros_like(self.origin_image)
         if (len(masks) == 0):
-            return
+            self.colorMasks = image
+            return image
         for mask in masks:
             image = self.overlay_mask(image, mask, 0.5, random_color=(len(masks) > 1))
         self.colorMasks = image
