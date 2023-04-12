@@ -225,7 +225,7 @@ class SAM_Web_App:
                 self.masks.append(mask)
 
         # One Object
-        elif ((boxes is not None and len(boxes) == 1) or (points is not None and len(points) > 0 and len(boxes) <= 1)):
+        elif ((boxes is not None and len(boxes) == 1) or (points is not None and boxes is not None and len(boxes) <= 1)):
             masks, scores, logits = self.predictor.predict(
                 point_coords=points,
                 point_labels=labels,
@@ -321,4 +321,4 @@ class SAM_Web_App:
 if __name__ == '__main__':
     args = parser().parse_args()
     app = SAM_Web_App(args)
-    app.run(debug=True)
+    app.run(debug=False)
