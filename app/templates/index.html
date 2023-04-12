@@ -6,7 +6,7 @@
     <title>Image Processing App</title>
     <style>
         #preview {
-            max-width: 1700px;
+            max-width: 1650px;
             max-height: 750px;
             width: auto;
         }
@@ -307,6 +307,8 @@
                     preview.style.width = 'auto';
                     preview.style.height = 'auto';
                     $('#preview').attr('src', e.target.result);
+                    // Update the zoomImage src when the preview image changes
+                    $('#zoom-image').attr('src', e.target.result);
 
                     var img = new Image();
                     img.src = e.target.result;
@@ -408,6 +410,7 @@
                     success: function (response) {
                         console.log(response);
                         $("#preview").attr("src", "data:image/jpeg;base64," + response.image);
+                        $('#zoom-image').attr('src', "data:image/jpeg;base64," + response.image);
                     },
                 });
             }
@@ -449,6 +452,17 @@
                 updateZoomImage(mouseX, mouseY);
             }
         });
+
+        $("#preview").on("wheel", function (e) {
+            if (zoomEnabled) {
+                const offset = $(this).offset();
+                const mouseX = e.pageX - offset.left;
+                const mouseY = e.pageY - offset.top;
+
+                updateZoomImage(mouseX, mouseY);
+            }
+        });
+
 
         $("#preview").mouseenter(function () {
             if (zoomEnabled) {
