@@ -181,7 +181,7 @@ class SAM_Web_App:
             elif (id == MODE.MASKS):
                 processed_image = self.masked_img
             elif (id == MODE.COLOR_MASKS):
-                processed_image = self.get_colored_masks_image()
+                processed_image = self.colorMasks
             elif (id == MODE.CLEAR):
                 processed_image = self.origin_image
                 self.processed_img = self.origin_image
@@ -203,6 +203,7 @@ class SAM_Web_App:
                 print(f"Labels shape {labels.shape}")
                 print(f"Boxes shape {boxes.shape}")
                 processed_image = self.inference(self.origin_image, points, labels, boxes)
+                self.get_colored_masks_image()
                 self.processed_img = processed_image
             elif (id == MODE.UNDO):
                 print("Undo")
