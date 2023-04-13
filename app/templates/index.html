@@ -309,9 +309,12 @@
                 }
             }
 
-            // Sort imageFiles array alphabetically by file name
+            // Sort imageFiles array alphabetically by file name, with better number sorting
             imageFiles.sort(function(a, b) {
-                return a.name.localeCompare(b.name);
+                const regex = /(\d+)/g;
+                const aName = a.name.replace(regex, match => match.padStart(10, '0'));
+                const bName = b.name.replace(regex, match => match.padStart(10, '0'));
+                return aName.localeCompare(bName);
             });
 
             // Process the sorted imageFiles array
