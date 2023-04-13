@@ -119,7 +119,7 @@
         .buttons-group {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 5px;
             padding-left: 2px;
             padding-right: 2px;
             border: 1px solid #857f7f;
@@ -524,19 +524,19 @@
 
         // Buttons
         $("#image").click(function() {
+            processButtonClick(1);
             toggleSelectedViewButton("image");
             togglePointsAndBoxesVisibility(1);
-            processButtonClick(1);
         });
         $("#maskImage").click(function() {
+            processButtonClick(2);
             toggleSelectedViewButton("maskImage");
             togglePointsAndBoxesVisibility(2);
-            processButtonClick(2);
         });
         $("#colorMasks").click(function() {
+            processButtonClick(9);
             toggleSelectedViewButton("colorMasks");
             togglePointsAndBoxesVisibility(2);
-            processButtonClick(9);
         });
         $("#clear").click(function() {
             processButtonClick(3);
@@ -545,29 +545,29 @@
             queue = new Deque(max_deque_len);
         });
         $("#button4").click(function() {
-            toggleSelectedModeButton("button4");
             processButtonClick(4);
+            toggleSelectedModeButton("button4");
             mode = "p_point";
 
         });
         $("#button5").click(function() {
-            toggleSelectedModeButton("button5");
             processButtonClick(5);
+            toggleSelectedModeButton("button5");
             mode = "n_point";
         });
         $("#button6").click(function() {
-            toggleSelectedModeButton("button6");
             processButtonClick(6);
+            toggleSelectedModeButton("button6");
             mode = "box";
         });
         $("#inference").click(async function() {
-            togglePointsAndBoxesVisibility(2);
             // Disable buttons and mouse event when processing
             toggleProcessingButtons(true);
             $("#preview").css("pointer-events", "wait");
             $("#preview").css("cursor", "wait");
-
+            
             await processButtonClick(7);
+            togglePointsAndBoxesVisibility(2);
             var thisTimeInputNum = {
                 "p": points.length - prevInputLen["p"],
                 "b": boxes.length - prevInputLen["b"]
@@ -763,6 +763,10 @@
         }
 
         $("#toggle-zoom").click(function () {
+            if (selectedImage === null) {
+                alert("Please select an image first.");
+                return;
+            }
             zoomEnabled = !zoomEnabled;
             toggleZoomButton(zoomEnabled);
             if (!zoomEnabled) {
