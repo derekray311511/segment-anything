@@ -3,6 +3,7 @@ from flask_cors import CORS
 from segment_anything import sam_model_registry, SamPredictor, SamAutomaticMaskGenerator
 from typing import Any, Dict, List
 from arg_parse import parser
+from utils import mkdir_or_exist
 from collections import deque
 import cv2
 import numpy as np
@@ -108,6 +109,7 @@ class SAM_Web_App:
         self.app.route('/point_click', methods=['POST'])(self.handle_mouse_click)
         self.app.route('/box_receive', methods=['POST'])(self.box_receive)
         self.app.route('/set_save_path', methods=['POST'])(self.set_save_path)
+        self.app.route('/save_image', methods=['POST'])(self.save_image)
 
     def home(self):
         return render_template('index.html', default_save_path=self.save_path)
@@ -122,6 +124,21 @@ class SAM_Web_App:
             return jsonify({"status": "success", "message": "Save path set successfully"})
         else:
             return jsonify({"status": "error", "message": "Invalid save path"})
+        
+    def save_image(self):
+        # Save the colorMasks
+        filename = request.form.get("filename")
+        print(filename)
+        dirname = os.path.join(self.save_path, filename)
+        mkdir_or_exist(dirname)
+        # Get the number of existing files in the save_folder
+        num_files = len([f for f in os.listdir(dirname) if os.path.isfile(os.path.join(dirname, f))])
+        # Create a unique file name based on the number of existing files
+        savename = f"{num_files}.png"
+        save_path = os.path.join(dirname, savename)
+        cv2.imwrite(save_path, self.colorMasks)
+        
+        return jsonify({'success': f"Image saved to {save_path}"})
 
     def upload_image(self):
         if 'image' not in request.files:

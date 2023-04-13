@@ -210,6 +210,7 @@
     <div class="container">
         <div class="buttons">
             <button id="load-image">Load Image</button>
+            <button id="save-masks">Save Image</button>
             <button id="button1">Image view</button>
             <button id="button2">Masks view</button>
             <button id="colorMask">Color Masks</button>
@@ -558,6 +559,20 @@
                 error: function(error) {
                     // Handle any errors that occurred during the request.
                     console.error(error);
+                },
+            });
+        });
+
+        $("#save-masks").click(function() {
+            // Send the save command to the server.
+            var fileName = document.getElementById("image-name").textContent;
+            fileName = fileName.split(".")[0];
+            $.ajax({
+                url: "/save_image",
+                type: "POST",
+                data: {filename: fileName},
+                success: function (response) {
+                    console.log(response);
                 },
             });
         });
