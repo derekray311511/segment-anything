@@ -199,3 +199,11 @@ function togglePointsAndBoxesVisibility(button_id) {
     });
 }
 
+function toggleProcessingButtons(disabled) {
+    $("button").prop("disabled", disabled);
+    if (disabled) {
+        $("button").addClass("processing");
+    } else {
+        $("button").removeClass("processing");
+    }
+}

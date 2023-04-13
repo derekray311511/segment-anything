@@ -164,6 +164,15 @@
             border: 1px solid #fff;
         }
 
+        .processing {
+            cursor: wait;
+        }
+
+        button.processing {
+            background-color: #444;
+            cursor: not-allowed;
+        }
+
         input[type="text"] {
             background-color: #555;
             border: none;
@@ -495,8 +504,13 @@
             processButtonClick(6);
             mode = "box";
         });
-        $("#button7").click(function() {
-            processButtonClick(7);
+        $("#button7").click(async function() {
+            togglePointsAndBoxesVisibility(2);
+            // Disable buttons and mouse event when processing
+            toggleProcessingButtons(true);
+            $("#preview").css("pointer-events", "none");
+
+            await processButtonClick(7);
             var thisTimeInputNum = {
                 "p": points.length - prevInputLen["p"],
                 "b": boxes.length - prevInputLen["b"]
@@ -507,8 +521,11 @@
             };
             console.log(thisTimeInputNum);
             var info = "inference-" + thisTimeInputNum["p"] + "-" + thisTimeInputNum["b"];
-            togglePointsAndBoxesVisibility(2)
             queue.push(info);
+
+            // Enable buttons and mouse events after processing
+            toggleProcessingButtons(false);
+            $("#preview").css("pointer-events", "auto");
         });
 
         $("#colorMask").click(function() {
@@ -621,14 +638,14 @@
         }
 
         // Add click event listeners for other buttons
-        function processButtonClick(button_id) {
+        async function processButtonClick(button_id) {
             if (selectedImage === null) {
                 alert("Please select an image first.");
                 return;
             }
 
             if (button_id !== null) {
-                $.ajax({
+                await $.ajax({
                     url: "/button_click",
                     type: "POST",
                     data: JSON.stringify({ button_id: button_id }),
