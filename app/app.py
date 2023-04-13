@@ -98,14 +98,30 @@ class SAM_Web_App:
         self.boxes = []
         self.masks = []
 
+        # Set the default save path to the Downloads folder
+        home_dir = os.path.expanduser("~")
+        self.save_path = os.path.join(home_dir, "Downloads")
+
         self.app.route('/', methods=['GET'])(self.home)
         self.app.route('/upload_image', methods=['POST'])(self.upload_image)
         self.app.route('/button_click', methods=['POST'])(self.button_click)
         self.app.route('/point_click', methods=['POST'])(self.handle_mouse_click)
         self.app.route('/box_receive', methods=['POST'])(self.box_receive)
+        self.app.route('/set_save_path', methods=['POST'])(self.set_save_path)
 
     def home(self):
-        return render_template('index.html')
+        return render_template('index.html', default_save_path=self.save_path)
+    
+    def set_save_path(self):
+        self.save_path = request.form.get("save_path")
+
+        # Perform your server-side checks on the save_path here
+        # e.g., check if the path exists, if it is writable, etc.
+        if os.path.isdir(self.save_path):
+            print(f"Set save path to: {self.save_path}")
+            return jsonify({"status": "success", "message": "Save path set successfully"})
+        else:
+            return jsonify({"status": "error", "message": "Invalid save path"})
 
     def upload_image(self):
         if 'image' not in request.files:

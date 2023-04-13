@@ -115,6 +115,16 @@
             gap: 10px;
             margin-right: 20px;
         }
+        .top-grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            height: 50px;
+            grid-gap: 10px;
+            margin-bottom: 10px;
+            margin-top: 10px;
+            align-items: center;
+            justify-content: center;
+        }
         .grid-container {
             display: grid;
             grid-template-columns: repeat(3, 150px);
@@ -125,6 +135,10 @@
             margin-right: 20px;
             align-items: center;
             justify-content: center;
+        }
+        .save-path-container {
+            display: flex;
+            align-items: center;
         }
 
         button {
@@ -150,15 +164,46 @@
             border: 1px solid #fff;
         }
 
+        input[type="text"] {
+            background-color: #555;
+            border: none;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            width: 250px;
+            padding: 12px 24px;
+            margin: 4px 2px;
+            border-radius: 8px;
+            transition-duration: 0.4s;
+        }
+
+        input[type="text"]:focus {
+            background-color: #777;
+            color: white;
+            padding: 16px 24px;
+            border: 1px solid #fff;
+            outline: none;
+        }
+
+
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <div class="grid-container" id="folder-selection">
-        <button id="prev-image">Previous</button>
-        <button id="select-folder">Select Folder</button>
-        <button id="next-image">Next</button>
-        <input type="file" id="input-folder" webkitdirectory="" directory="" multiple="" style="display:none">
+    <div class="top-grid-container">
+        <div class="save-path-container">
+            <input type="text" id="save-path" value="{{ default_save_path }}">
+            <button id="set-save-path">Set Save Path</button>
+        </div>
+        <div class="grid-container" id="folder-selection">
+            <button id="prev-image">Previous</button>
+            <button id="select-folder">Select Folder</button>
+            <button id="next-image">Next</button>
+            <input type="file" id="input-folder" webkitdirectory="" directory="" multiple="" style="display:none">
+        </div>
+        <span id="image-name" style="display: flex;"></span>
     </div>
     <div id="thumbnail-container"></div>
 
@@ -483,7 +528,38 @@
         });
         document.getElementById("input-image").addEventListener("thumbnailClick", function(e) {
             selectedImage = e.detail.file; // Store the selected file
+            document.getElementById("image-name").textContent = e.detail.file.name;
             readURL({ files: [e.detail.file] });
+        });
+        $("#save-path").keydown(function(e) {
+            e.stopPropagation();
+            // Check if the Enter key was pressed
+            if (e.keyCode === 13) {
+                // Trigger the click event for the "Set Save Path" button
+                $("#set-save-path").trigger("click");
+            }
+        });
+        $("#set-save-path").click(function() {
+            const savePath = $("#save-path").val();
+            // Send the save path to the server.
+            $.ajax({
+                url: "/set_save_path",
+                type: "POST",
+                data: {save_path: savePath},
+                success: function(response) {
+                    // Handle the server response here.
+                    console.log(response);
+                    if (response.status === "success") {
+                        alert(response.message);
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function(error) {
+                    // Handle any errors that occurred during the request.
+                    console.error(error);
+                },
+            });
         });
 
         $("#undo").click(function() {
