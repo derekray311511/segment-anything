@@ -110,12 +110,30 @@ document.getElementById('next-image').addEventListener('click', function() {
     console.log('Button next-image clicked');
 });
 
-// save image shortcut
+// ctrl Shortcuts
 $(document).keydown(function (event) {
-    // Check if the Ctrl key is pressed and the key code for the 'S' key (83)
-    if (event.ctrlKey && event.which === 83) {
+    // Check if the Ctrl key is pressed and the key code for the 's' key (83)
+    if (event.ctrlKey && event.key === 's') {
         event.preventDefault(); // Prevent the browser's default save action
         buttonClick('save-masks'); // Call the function to save the image
+    }
+});
+$(document).keydown(function (event) {
+    if (event.ctrlKey && event.key === 'l') {
+        event.preventDefault(); // Prevent the browser's default save action
+        buttonClick('load-image'); // Call the function to save the image
+    }
+});
+$(document).keydown(function (event) {
+    if (event.ctrlKey && event.key === 'z') {
+        event.preventDefault(); // Prevent the browser's default save action
+        buttonClick('undo'); // Call the function to save the image
+    }
+});
+$(document).keydown(function (event) {
+    if (event.key === 'z' && !event.ctrlKey) {
+        event.preventDefault(); // Prevent the browser's default save action
+        buttonClick('toggle-zoom'); // Call the function to save the image
     }
 });
 

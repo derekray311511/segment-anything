@@ -123,7 +123,7 @@ class SAM_Web_App:
             print(f"Set save path to: {self.save_path}")
             return jsonify({"status": "success", "message": "Save path set successfully"})
         else:
-            return jsonify({"status": "error", "message": "Invalid save path"})
+            return jsonify({"status": "error", "message": "Invalid save path"}), 400
         
     def save_image(self):
         # Save the colorMasks
