@@ -287,18 +287,22 @@ class SAM_Web_App:
                     self.masks = self.masks[:(len(self.masks) - int(val))]
                     self.processed_img = self.updateMaskImg(self.masks)
                     self.get_colored_masks_image()
-                    if self.curr_view == "masks":
-                        processed_image = self.masked_img
-                    elif self.curr_view == "colorMasks":
-                        processed_image = self.colorMasks
-                    else:   # self.curr_view == "image":
-                        processed_image = self.processed_img
 
                     # Load prev inputs
                     prev_inputs = self.prev_inputs.pop()
                     self.points = prev_inputs["points"]
                     self.points_label = prev_inputs["labels"]
                     self.boxes = prev_inputs["boxes"]
+                
+                if self.curr_view == "masks":
+                    print("masks")
+                    processed_image = self.masked_img
+                elif self.curr_view == "colorMasks":
+                    print("color")
+                    processed_image = self.colorMasks
+                else:   # self.curr_view == "image":
+                    print("image")
+                    processed_image = self.processed_img
 
         _, buffer = cv2.imencode('.jpg', processed_image)
         img_base64 = base64.b64encode(buffer).decode('utf-8')
