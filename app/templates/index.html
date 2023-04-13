@@ -388,6 +388,7 @@
         const max_deque_len = 1000
         let mode = "p_point"; // Default mode is 'point', 'point'/'box'
         let queue = new Deque(max_deque_len)  // Undo / do list
+        let prevInputLen = {"p": 0, "b": 0};  // To calculate current inference input numbers
 
         $("#load-image").click(function() {
             $("#input-image").trigger("click");
@@ -423,7 +424,18 @@
         });
         $("#button7").click(function() {
             processButtonClick(7);
-            queue.push("inference");
+            var thisTimeInputNum = {
+                "p": points.length - prevInputLen["p"],
+                "b": boxes.length - prevInputLen["b"]
+            };
+            prevInputLen = {
+                "p": points.length,
+                "b": boxes.length
+            };
+            console.log(thisTimeInputNum);
+            var info = "inference-" + thisTimeInputNum["p"] + "-" + thisTimeInputNum["b"];
+            togglePointsAndBoxesVisibility(2)
+            queue.push(info);
         });
 
         $("#colorMask").click(function() {
@@ -448,22 +460,47 @@
         });
 
         $("#undo").click(function() {
-            var command = queue.pop();
+            if (queue.size() != 0) {
+                var command = queue.pop();
+                command = command.split("-");
+            }
+            else {
+                command = undefined;
+            }
             console.log("Undo Command", command);
             if (command === undefined) {
                 // pass
             }
-            else if (command === "point") {
+            else if (command[0] === "point") {
                 points.pop().remove();
             }
-            else if (command === "box") {
+            else if (command[0] === "box") {
                 boxes.pop().remove();
             }
-            else if (command === "inference") {
+            else if (command[0] === "inference") {
+                console.log("Undo inference, visiaulize " + command[1] + "-" + command[2] + " inputs");
+                stepInputPsize = parseInt(command[1]);
+                stepInputBsize = parseInt(command[2]);
+                toggleInputsVisibilityN(stepInputPsize, stepInputBsize);
                 // read new image from processButtonClick()
             }
             processButtonClick(8);
         });
+
+        function toggleInputsVisibilityN(n1, n2) {
+            if (n1 !== 0) {
+                var targets = points.slice(-n1);
+                targets.forEach(point => {
+                    point.style.display = "block";
+                });
+            }
+            if (n2 !== 0) {
+                var targets = boxes.slice(-n2);
+                targets.forEach(box => {
+                    box.style.display = "block";
+                });
+            }
+        }
 
         // Add click event listeners for other buttons
         function processButtonClick(button_id) {
