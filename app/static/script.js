@@ -1,25 +1,33 @@
-var switch_view = 0;
+let switch_view = 0;
+let switch_pn_point = 1;
 
 document.addEventListener('keydown', function(event) {
     if (event.key === '1') {
-        buttonClick('button1');
+        buttonClick('image');
         switch_view = 0;
     } 
     else if (event.key === '2') {
-        buttonClick('button2');
+        buttonClick('maskImage');
         switch_view = 1;
+    }
+    else if (event.key === '3') {
+        buttonClick('colorMasks');
+        switch_view = 2;
     }
     else if (event.key === 'v') {
         if (switch_view === 0) {
-            buttonClick('button2');
+            buttonClick('maskImage');
         }
         else if (switch_view === 1) {
-            buttonClick('button1');
+            buttonClick('colorMasks');
         }
-        switch_view ^= 1;
+        else if (switch_view === 2) {
+            buttonClick('image')
+        }
+        switch_view = (switch_view + 1) % 3;
     }
-    else if (event.key === '3' || event.key === "c") {
-        buttonClick('button3');
+    else if (event.key === "c") {
+        buttonClick('clear');
     }
     else if (event.key === '4') {
         buttonClick('button4');
@@ -31,7 +39,7 @@ document.addEventListener('keydown', function(event) {
         buttonClick('button6');
     }
     else if (event.key === '7' || event.key === "r") {
-        buttonClick('button7');
+        buttonClick('inference');
     }
     else if (event.key === '8') {
         buttonClick('undo');
@@ -42,6 +50,15 @@ document.addEventListener('keydown', function(event) {
     else if (event.key === 'ArrowRight') {
         buttonClick('next-image');
     }
+    else if (event.key === 'p') {
+        if (switch_pn_point === 0) {
+            buttonClick('button4');
+        }
+        else if (switch_pn_point === 1) {
+            buttonClick('button5');
+        }
+        switch_pn_point ^= 1;
+    }
 });
 
 function buttonClick(buttonId) {
@@ -49,16 +66,20 @@ function buttonClick(buttonId) {
     button.click();
 }
 
-document.getElementById('button1').addEventListener('click', function() {
-    console.log('Button 1 clicked');
+document.getElementById('image').addEventListener('click', function() {
+    console.log('Button image clicked');
 });
 
-document.getElementById('button2').addEventListener('click', function() {
-    console.log('Button 2 clicked');
+document.getElementById('maskImage').addEventListener('click', function() {
+    console.log('Button maskImage clicked');
 });
 
-document.getElementById('button3').addEventListener('click', function() {
-    console.log('Button 3 clicked');
+document.getElementById('colorMasks').addEventListener('click', function() {
+    console.log('Button colorMasks clicked');
+});
+
+document.getElementById('clear').addEventListener('click', function() {
+    console.log('Button clear clicked');
 });
 
 document.getElementById('button4').addEventListener('click', function() {
@@ -73,8 +94,8 @@ document.getElementById('button6').addEventListener('click', function() {
     console.log('Button 6 clicked');
 });
 
-document.getElementById('button7').addEventListener('click', function() {
-    console.log('Button 7 clicked');
+document.getElementById('inference').addEventListener('click', function() {
+    console.log('Button inference clicked');
 });
 
 document.getElementById('undo').addEventListener('click', function() {
@@ -87,6 +108,15 @@ document.getElementById('prev-image').addEventListener('click', function() {
 
 document.getElementById('next-image').addEventListener('click', function() {
     console.log('Button next-image clicked');
+});
+
+// save image shortcut
+$(document).keydown(function (event) {
+    // Check if the Ctrl key is pressed and the key code for the 'S' key (83)
+    if (event.ctrlKey && event.which === 83) {
+        event.preventDefault(); // Prevent the browser's default save action
+        buttonClick('save-masks'); // Call the function to save the image
+    }
 });
 
 // Mouse wheel event
@@ -200,5 +230,28 @@ function toggleProcessingButtons(disabled) {
         $("button").addClass("processing");
     } else {
         $("button").removeClass("processing");
+    }
+}
+
+function toggleSelectedViewButton(buttonId) {
+    // Remove the 'selected-view' class from all view buttons
+    $("#image, #maskImage, #colorMasks").removeClass("selected-view");
+    // Add the 'selected-view' class to the clicked view button
+    $(`#${buttonId}`).addClass("selected-view");
+}
+
+function toggleSelectedModeButton(buttonId) {
+    // Remove the 'selected-Mode' class from all Mode buttons
+    $("#button4, #button5, #button6").removeClass("selected-view");
+    // Add the 'selected-Mode' class to the clicked Mode button
+    $(`#${buttonId}`).addClass("selected-view");
+}
+
+function toggleZoomButton(zoomEnabled) {
+    if (zoomEnabled) {
+        $("#toggle-zoom").addClass("selected-view");
+    }
+    else {
+        $("#toggle-zoom").removeClass("selected-view");
     }
 }

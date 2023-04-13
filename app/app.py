@@ -128,6 +128,8 @@ class SAM_Web_App:
     def save_image(self):
         # Save the colorMasks
         filename = request.form.get("filename")
+        if filename == "":
+            return jsonify({"status": "error", "message": "No image to save"}), 400
         print(filename)
         dirname = os.path.join(self.save_path, filename)
         mkdir_or_exist(dirname)
@@ -137,8 +139,8 @@ class SAM_Web_App:
         savename = f"{num_files}.png"
         save_path = os.path.join(dirname, savename)
         cv2.imwrite(save_path, self.colorMasks)
-        
-        return jsonify({'success': f"Image saved to {save_path}"})
+
+        return jsonify({"status": "success", "message": f"Image saved to {save_path}"})
 
     def upload_image(self):
         if 'image' not in request.files:

@@ -125,6 +125,10 @@
             border: 1px solid #857f7f;
             border-radius: 8px;
         }
+        .selected-view {
+            background-color: #444;
+            border: 1px solid #fff;
+        }
         .top-grid-container {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -205,7 +209,24 @@
             border: 1px solid #fff;
             outline: none;
         }
+        
+        .notification {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 16px;
+            font-size: 18px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
 
+        .notification.hide {
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
 
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -233,9 +254,9 @@
                 <button id="save-masks">Save Image</button>
             </div>
             <div class="buttons-group">
-                <button id="button1">Image view</button>
-                <button id="button2">Masks view</button>
-                <button id="colorMask">Color Masks</button>
+                <button id="image">Image view</button>
+                <button id="maskImage">Masks view</button>
+                <button id="colorMasks">Color Masks</button>
             </div>
             <div class="buttons-group">
                 <button id="button4">P Point mode</button>
@@ -243,9 +264,11 @@
                 <button id="button6">Box mode</button>
             </div>
             <div class="buttons-group">
-                <button id="button7">Inference</button>
+                <button id="inference">Inference</button>
                 <button id="undo">Undo</button>
-                <button id="button3">Clear</button>
+                <button id="clear">Clear</button>
+            </div>
+            <div class="buttons-group">
                 <button id="toggle-zoom">Toggle Zoom</button>
             </div>
             <!-- Add more buttons as needed -->
@@ -262,6 +285,8 @@
             <div class="crosshair-line crosshair-vertical"></div>
         </div>
     </div>
+    <div id="save-notification" class="notification">Image saved successfully!</div>
+
     <canvas id="default-preview-canvas" width="1" height="1" style="display: none;"></canvas>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
@@ -493,34 +518,44 @@
         });
 
         // Buttons
-        $("#button1").click(function() {
+        $("#image").click(function() {
+            toggleSelectedViewButton("image");
             togglePointsAndBoxesVisibility(1);
             processButtonClick(1);
         });
-        $("#button2").click(function() {
+        $("#maskImage").click(function() {
+            toggleSelectedViewButton("maskImage");
             togglePointsAndBoxesVisibility(2);
             processButtonClick(2);
         });
-        $("#button3").click(function() {
+        $("#colorMasks").click(function() {
+            toggleSelectedViewButton("colorMasks");
+            togglePointsAndBoxesVisibility(2);
+            processButtonClick(9);
+        });
+        $("#clear").click(function() {
             processButtonClick(3);
             clearAllBoxes();
             clearAllPoints();
             queue = new Deque(max_deque_len);
         });
         $("#button4").click(function() {
+            toggleSelectedModeButton("button4");
             processButtonClick(4);
             mode = "p_point";
 
         });
         $("#button5").click(function() {
+            toggleSelectedModeButton("button5");
             processButtonClick(5);
             mode = "n_point";
         });
         $("#button6").click(function() {
+            toggleSelectedModeButton("button6");
             processButtonClick(6);
             mode = "box";
         });
-        $("#button7").click(async function() {
+        $("#inference").click(async function() {
             togglePointsAndBoxesVisibility(2);
             // Disable buttons and mouse event when processing
             toggleProcessingButtons(true);
@@ -544,11 +579,6 @@
             toggleProcessingButtons(false);
             $("#preview").css("pointer-events", "auto");
             $("#preview").css("cursor", "crosshair");
-        });
-
-        $("#colorMask").click(function() {
-            togglePointsAndBoxesVisibility(2);
-            processButtonClick(9);
         });
 
         $("#prev-image").click(function() {
@@ -608,6 +638,18 @@
                 data: {filename: fileName},
                 success: function (response) {
                     console.log(response);
+                    // Show the save notification
+                    $("#save-notification").show().removeClass("hide");
+                    // Hide the save notification after 3 seconds (3000ms)
+                    setTimeout(function () {
+                        $("#save-notification").addClass("hide");
+                        setTimeout(function () {
+                            $("#save-notification").hide();
+                        }, 500);
+                    }, 3000);
+                },
+                error: function(error) {
+                    console.error(error);
                 },
             });
         });
@@ -714,6 +756,14 @@
             }
         }
 
+        $("#toggle-zoom").click(function () {
+            zoomEnabled = !zoomEnabled;
+            toggleZoomButton(zoomEnabled);
+            if (!zoomEnabled) {
+                zoomContainer.style.display = "none";
+            }
+        });
+
         $("#preview").mousemove(function (e) {
             if (zoomEnabled) {
                 const offset = $(this).offset();
@@ -748,13 +798,6 @@
         $("#preview").mouseleave(function () {
             zoomContainer.style.display = "none";
             zoomBox.style.display = "none";
-        });
-
-        $("#toggle-zoom").click(function () {
-            zoomEnabled = !zoomEnabled;
-            if (!zoomEnabled) {
-                zoomContainer.style.display = "none";
-            }
         });
 
         // Capture mouse click position on the image
