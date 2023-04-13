@@ -123,15 +123,19 @@ function handleMouseWheel(e) {
 
     // Get the computed style of the preview element and parent elements
     const previewStyle = getComputedStyle(preview);
-    const maxWidth = previewStyle.getPropertyValue('max-width');
-    const maxHeight = previewStyle.getPropertyValue('max-height');
-    
-    // Calculate the exact max-width value in pixels
-    const maxWidthValue = parseInt(maxWidth, 10);
-    const maxHeightValue = parseInt(maxHeight, 10);
-    if (newHeight > maxHeightValue || newWidth > maxWidthValue) {
-        console.log("Return due to large size")
-        return;
+    const maxHeight = parseFloat(previewStyle['max-height']);
+    const maxWidth = parseFloat(previewStyle['max-width']);
+
+    // if exceed the max size, set to max size
+    if (newHeight > maxHeight || newWidth > maxWidth) {
+        // Calculate the new width and height while maintaining the aspect ratio
+        newHeight = maxHeight;
+        newWidth = newHeight * aspectRatio;
+        if (newWidth > maxWidth) {
+            newWidth = maxWidth;
+            newHeight = newWidth / aspectRatio;
+        }
+        console.log("Image set to max size")
     }
 
     // Update the preview size
@@ -179,15 +183,6 @@ function updatePointsAndBoxes() {
 function togglePointsAndBoxesVisibility(button_id) {
     const imageContainer = document.getElementById("image-container");
     const pointsAndBoxes = imageContainer.querySelectorAll(".point, .box");
-
-    // // switch every time we call this function
-    // pointsAndBoxes.forEach(element => {
-    //     if (element.style.display === "none") {
-    //         element.style.display = "block";
-    //     } else {
-    //         element.style.display = "none";
-    //     }
-    // });
 
     pointsAndBoxes.forEach(element => {
         if (button_id === 1) {
