@@ -116,6 +116,15 @@
             gap: 10px;
             margin-right: 20px;
         }
+        .buttons-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-left: 2px;
+            padding-right: 2px;
+            border: 1px solid #857f7f;
+            border-radius: 8px;
+        }
         .top-grid-container {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -219,18 +228,26 @@
 
     <div class="container">
         <div class="buttons">
-            <button id="load-image">Load Image</button>
-            <button id="save-masks">Save Image</button>
-            <button id="button1">Image view</button>
-            <button id="button2">Masks view</button>
-            <button id="colorMask">Color Masks</button>
-            <button id="button4">P Point mode</button>
-            <button id="button5">N Point mode</button>
-            <button id="button6">Box mode</button>
-            <button id="button7">Inference</button>
-            <button id="undo">Undo</button>
-            <button id="button3">Clear</button>
-            <button id="toggle-zoom">Toggle Zoom</button>
+            <div class="buttons-group">
+                <button id="load-image">Load Image</button>
+                <button id="save-masks">Save Image</button>
+            </div>
+            <div class="buttons-group">
+                <button id="button1">Image view</button>
+                <button id="button2">Masks view</button>
+                <button id="colorMask">Color Masks</button>
+            </div>
+            <div class="buttons-group">
+                <button id="button4">P Point mode</button>
+                <button id="button5">N Point mode</button>
+                <button id="button6">Box mode</button>
+            </div>
+            <div class="buttons-group">
+                <button id="button7">Inference</button>
+                <button id="undo">Undo</button>
+                <button id="button3">Clear</button>
+                <button id="toggle-zoom">Toggle Zoom</button>
+            </div>
             <!-- Add more buttons as needed -->
         </div>
         <input type="file" id="input-image" accept="image/*" style="display:none">
@@ -374,8 +391,6 @@
                 var reader = new FileReader();
                 reader.onload = function (e) {
                     const preview = document.getElementById("preview");
-                    // preview.style.width = 'auto';
-                    // preview.style.height = 'auto';
                     $('#preview').attr('src', e.target.result);
                     // Update the zoomImage src when the preview image changes
                     $('#zoom-image').attr('src', e.target.result);
@@ -509,7 +524,8 @@
             togglePointsAndBoxesVisibility(2);
             // Disable buttons and mouse event when processing
             toggleProcessingButtons(true);
-            $("#preview").css("pointer-events", "none");
+            $("#preview").css("pointer-events", "wait");
+            $("#preview").css("cursor", "wait");
 
             await processButtonClick(7);
             var thisTimeInputNum = {
@@ -527,6 +543,7 @@
             // Enable buttons and mouse events after processing
             toggleProcessingButtons(false);
             $("#preview").css("pointer-events", "auto");
+            $("#preview").css("cursor", "crosshair");
         });
 
         $("#colorMask").click(function() {
