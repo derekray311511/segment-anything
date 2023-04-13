@@ -307,8 +307,8 @@
                 var reader = new FileReader();
                 reader.onload = function (e) {
                     const preview = document.getElementById("preview");
-                    preview.style.width = 'auto';
-                    preview.style.height = 'auto';
+                    // preview.style.width = 'auto';
+                    // preview.style.height = 'auto';
                     $('#preview').attr('src', e.target.result);
                     // Update the zoomImage src when the preview image changes
                     $('#zoom-image').attr('src', e.target.result);
@@ -319,6 +319,22 @@
                         // Store the original width and height
                         $('#preview').data('originalWidth', this.width);
                         $('#preview').data('originalHeight', this.height);
+
+                        // Calculate the new width and height while maintaining the aspect ratio
+                        const aspectRatio = this.width / this.height;
+                        const maxHeight = parseFloat(getComputedStyle(preview)['max-height']);
+                        const maxWidth = parseFloat(getComputedStyle(preview)['max-width']);
+                        let newHeight = maxHeight;
+                        let newWidth = newHeight * aspectRatio;
+
+                        if (newWidth > maxWidth) {
+                            newWidth = maxWidth;
+                            newHeight = newWidth / aspectRatio;
+                        }
+
+                        // Set the new width and height for the preview image
+                        preview.style.width = newWidth + 'px';
+                        preview.style.height = newHeight + 'px';
                     }
                 };
                 reader.readAsDataURL(input.files[0]);
