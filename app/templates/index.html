@@ -595,6 +595,7 @@
         });
 
         $("#input-image").change(function() {
+            document.getElementById("image-name").textContent = this.files[0].name;
             readURL(this);
         });
         document.getElementById("input-image").addEventListener("thumbnailClick", function(e) {
