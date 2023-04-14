@@ -515,6 +515,7 @@
         let mode = "p_point"; // Default mode is 'point', 'point'/'box'
         let queue = new Deque(max_deque_len)  // Undo / do list
         let prevInputLen = {"p": 0, "b": 0};  // To calculate current inference input numbers
+        let lastDataLen = {"p": 0, "b": 0};   // How many points and boxes are there before inference
         let lastMouseX = 0;
         let lastMouseY = 0;
 
@@ -569,14 +570,18 @@
             await processButtonClick(7);
             togglePointsAndBoxesVisibility(2);
             var thisTimeInputNum = {
-                "p": points.length - prevInputLen["p"],
-                "b": boxes.length - prevInputLen["b"]
+                "p": points.length - lastDataLen["p"],
+                "b": boxes.length - lastDataLen["b"]
             };
-            prevInputLen = {
+            lastDataLen = {
                 "p": points.length,
                 "b": boxes.length
+            }
+            prevInputLen = {
+                "p": thisTimeInputNum["p"],
+                "b": thisTimeInputNum["b"]
             };
-            console.log(thisTimeInputNum);
+            console.log("This time inference: ", thisTimeInputNum["p"], thisTimeInputNum["b"]);
             var info = "inference-" + thisTimeInputNum["p"] + "-" + thisTimeInputNum["b"];
             queue.push(info);
 
@@ -682,6 +687,10 @@
                 console.log("Undo inference, visiaulize " + command[1] + "-" + command[2] + " inputs");
                 stepInputPsize = parseInt(command[1]);
                 stepInputBsize = parseInt(command[2]);
+                prevInputLen = {
+                    "p": stepInputBsize,
+                    "b": stepInputBsize
+                };
                 toggleInputsVisibilityN(stepInputPsize, stepInputBsize);
                 // read new image from processButtonClick()
             }
