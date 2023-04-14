@@ -26,7 +26,7 @@ document.addEventListener('keydown', function(event) {
         }
         switch_view = (switch_view + 1) % 3;
     }
-    else if (event.key === "c") {
+    else if (event.key === "c" && !event.ctrlKey) {
         buttonClick('clear');
     }
     else if (event.key === '4') {
