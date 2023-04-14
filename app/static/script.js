@@ -228,19 +228,45 @@ function updatePointsAndBoxes() {
     });
 }
 
-function togglePointsAndBoxesVisibility(button_id) {
+function togglePointsAndBoxesVisibility(enable) {
     const imageContainer = document.getElementById("image-container");
     const pointsAndBoxes = imageContainer.querySelectorAll(".point, .box");
 
     pointsAndBoxes.forEach(element => {
-        if (button_id === 1) {
-            element.style.display = "block";
+        const $element = $(element); // Wrap the element with jQuery
+        const currentDisplayStyle = $element.css("display");
+
+        if (enable) {
+            // Retrieve the original display style from the data attribute
+            const originalDisplayStyle = $element.data("original-display-style");
+            if (originalDisplayStyle) {
+                console.log("retrieve from origin");
+                // Set the original display style back to the element
+                $element.css("display", originalDisplayStyle);
+                $element.removeData("original-display-style");
+            }
         } 
-        else if (button_id === 2) {
-            element.style.display = "none";
+        else {
+            if (!$element.data("original-display-style")) {
+                console.log("Set origin");
+                // Store the current display style in a data attribute
+                $element.data("original-display-style", currentDisplayStyle);
+                $element.css("display", "none");
+            }
         }
     });
 }
+
+function clear_original_display_style() {
+    const imageContainer = document.getElementById("image-container");
+    const pointsAndBoxes = imageContainer.querySelectorAll(".point, .box");
+    pointsAndBoxes.forEach(element => {
+        const $element = $(element); // Wrap the element with jQuery
+        $element.removeData("original-display-style");
+        console.log("Clear");
+    });
+}
+
 
 function toggleProcessingButtons(disabled) {
     $("button").prop("disabled", disabled);

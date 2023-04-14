@@ -568,17 +568,17 @@
         $("#image").click(function() {
             processButtonClick(1);
             toggleSelectedViewButton("image");
-            togglePointsAndBoxesVisibility(1);
+            togglePointsAndBoxesVisibility(true);
         });
         $("#maskImage").click(function() {
             processButtonClick(2);
             toggleSelectedViewButton("maskImage");
-            togglePointsAndBoxesVisibility(2);
+            togglePointsAndBoxesVisibility(false);
         });
         $("#colorMasks").click(function() {
             processButtonClick(9);
             toggleSelectedViewButton("colorMasks");
-            togglePointsAndBoxesVisibility(2);
+            togglePointsAndBoxesVisibility(false);
         });
         $("#clear").click(function() {
             processButtonClick(3);
@@ -609,7 +609,7 @@
             $("#preview").css("cursor", "wait");
             
             await processButtonClick(7);
-            togglePointsAndBoxesVisibility(2);
+            togglePointsAndBoxesVisibility(false);
             var thisTimeInputNum = {
                 "p": points.length - lastDataLen["p"],
                 "b": boxes.length - lastDataLen["b"]
@@ -628,6 +628,7 @@
 
             // Enable buttons and mouse events after processing
             toggleProcessingButtons(false);
+            clear_original_display_style();
             $("#preview").css("pointer-events", "auto");
             $("#preview").css("cursor", "crosshair");
         });
