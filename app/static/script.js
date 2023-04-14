@@ -240,7 +240,6 @@ function togglePointsAndBoxesVisibility(enable) {
             // Retrieve the original display style from the data attribute
             const originalDisplayStyle = $element.data("original-display-style");
             if (originalDisplayStyle) {
-                console.log("retrieve from origin");
                 // Set the original display style back to the element
                 $element.css("display", originalDisplayStyle);
                 $element.removeData("original-display-style");
@@ -248,7 +247,6 @@ function togglePointsAndBoxesVisibility(enable) {
         } 
         else {
             if (!$element.data("original-display-style")) {
-                console.log("Set origin");
                 // Store the current display style in a data attribute
                 $element.data("original-display-style", currentDisplayStyle);
                 $element.css("display", "none");
@@ -263,7 +261,6 @@ function clear_original_display_style() {
     pointsAndBoxes.forEach(element => {
         const $element = $(element); // Wrap the element with jQuery
         $element.removeData("original-display-style");
-        console.log("Clear");
     });
 }
 

@@ -455,6 +455,7 @@
             clearAllBoxes();
             clearAllPoints();
             queue = new Deque(max_deque_len);
+            trackDataNum = new Deque(max_deque_len);
             if (input.files && input.files[0]) {
                 selectedImage = input.files[0]; // Store the selected file
                 var reader = new FileReader();
@@ -554,9 +555,8 @@
 
         const max_deque_len = 1000
         let mode = "p_point"; // Default mode is 'point', 'point'/'box'
-        let queue = new Deque(max_deque_len)  // Undo / do list
-        let prevInputLen = {"p": 0, "b": 0};  // To calculate current inference input numbers
-        let lastDataLen = {"p": 0, "b": 0};   // How many points and boxes are there before inference
+        let queue = new Deque(max_deque_len); // Undo / do list
+        let trackDataNum = new Deque(max_deque_len);
         let lastMouseX = 0;
         let lastMouseY = 0;
 
@@ -585,6 +585,7 @@
             clearAllBoxes();
             clearAllPoints();
             queue = new Deque(max_deque_len);
+            trackDataNum = new Deque(max_deque_len);
         });
         $("#button4").click(function() {
             processButtonClick(4);
@@ -610,18 +611,22 @@
             
             await processButtonClick(7);
             togglePointsAndBoxesVisibility(false);
-            var thisTimeInputNum = {
-                "p": points.length - lastDataLen["p"],
-                "b": boxes.length - lastDataLen["b"]
-            };
-            lastDataLen = {
-                "p": points.length,
-                "b": boxes.length
+            console.log(trackDataNum.size());
+            if (trackDataNum.size() > 0) {
+                var PrevDataNum = trackDataNum.pop();
             }
-            prevInputLen = {
-                "p": thisTimeInputNum["p"],
-                "b": thisTimeInputNum["b"]
+            else {
+                var PrevDataNum = {"p": 0, "b": 0};
+            }
+            var thisTimeInputNum = {
+                "p": points.length - PrevDataNum["p"],
+                "b": boxes.length - PrevDataNum["b"]
             };
+            var currDataNum = {
+                "p": points.length, 
+                "b": boxes.length
+            };
+            trackDataNum.push(currDataNum);
             console.log("This time inference: ", thisTimeInputNum["p"], thisTimeInputNum["b"]);
             var info = "inference-" + thisTimeInputNum["p"] + "-" + thisTimeInputNum["b"];
             queue.push(info);
@@ -729,10 +734,11 @@
                 console.log("Undo inference, visiaulize " + command[1] + "-" + command[2] + " inputs");
                 stepInputPsize = parseInt(command[1]);
                 stepInputBsize = parseInt(command[2]);
-                prevInputLen = {
-                    "p": stepInputBsize,
-                    "b": stepInputBsize
+                var currDataNum = {
+                    "p": points.length - stepInputPsize, 
+                    "b": boxes.length - stepInputBsize
                 };
+                trackDataNum.push(currDataNum);
                 toggleInputsVisibilityN(stepInputPsize, stepInputBsize);
                 // read new image from processButtonClick()
             }
