@@ -130,7 +130,7 @@ class SAM_Web_App:
         filename = request.form.get("filename")
         if filename == "":
             return jsonify({"status": "error", "message": "No image to save"}), 400
-        print(filename)
+        print(f"Saving: {filename} ...", end="")
         dirname = os.path.join(self.save_path, filename)
         mkdir_or_exist(dirname)
         # Get the number of existing files in the save_folder
@@ -138,9 +138,13 @@ class SAM_Web_App:
         # Create a unique file name based on the number of existing files
         savename = f"{num_files}.png"
         save_path = os.path.join(dirname, savename)
-        cv2.imwrite(save_path, self.colorMasks)
-
-        return jsonify({"status": "success", "message": f"Image saved to {save_path}"})
+        try:
+            encoded_img = cv2.imencode(".png", self.colorMasks)[1]
+            encoded_img.tofile(save_path)
+            print("Done!")
+            return jsonify({"status": "success", "message": f"Image saved to {save_path}"})
+        except:
+            return jsonify({"status": "error", "message": "Imencode error"}), 400
 
     def upload_image(self):
         if 'image' not in request.files:
