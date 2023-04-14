@@ -154,6 +154,9 @@
             display: flex;
             align-items: center;
         }
+        .wait-cursor {
+            cursor: wait !important;
+        }
 
         button {
             background-color: #555;
@@ -298,7 +301,9 @@
         $("#select-folder").click(function() {
             $("#input-folder").trigger("click");
         });
-        $("#input-folder").change(function(e) {
+        $("#input-folder").change(async function(e) {
+            toggleProcessingButtons(true);
+            $("body").addClass("wait-cursor");
             const files = e.target.files;
             $("#thumbnail-container").empty(); // Clear the previous thumbnails
             imageFiles = []; // Clear the previous image files
@@ -309,33 +314,69 @@
                 }
             }
 
-            // Sort imageFiles array alphabetically by file name, with better number sorting
-            imageFiles.sort(function(a, b) {
-                const regex = /(\d+)/g;
-                const aName = a.name.replace(regex, match => match.padStart(10, '0'));
-                const bName = b.name.replace(regex, match => match.padStart(10, '0'));
-                return aName.localeCompare(bName);
+            // Natural sort function
+            function naturalCompare(a, b) {
+                const re = /(\d+)/g;
+                const aParts = a.name.split(re);
+                const bParts = b.name.split(re);
+
+                for (let i = 0; i < aParts.length && i < bParts.length; i++) {
+                    const x = aParts[i];
+                    const y = bParts[i];
+
+                    if (x === y) continue;
+
+                    const xIsNumber = !isNaN(parseInt(x, 10));
+                    const yIsNumber = !isNaN(parseInt(y, 10));
+
+                    if (xIsNumber && yIsNumber) {
+                        const numCmp = parseInt(x, 10) - parseInt(y, 10);
+                        if (numCmp !== 0) return numCmp;
+                    } else {
+                        const strCmp = x.localeCompare(y);
+                        if (strCmp !== 0) return strCmp;
+                    }
+                }
+
+                return aParts.length - bParts.length;
+            }
+
+            // Sort imageFiles array using naturalCompare function
+            imageFiles.sort(naturalCompare);
+
+            // Create an array of Promises for each image file
+            const imagePromises = imageFiles.map(file => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement("img");
+                        img.src = e.target.result;
+                        img.height = 100;
+                        img.style.width = 'auto';
+                        img.classList.add("thumbnail");
+                        img.addEventListener("click", function() {
+                            selectThumbnail(img);
+                            var newEvent = new CustomEvent("thumbnailClick", { detail: { file: file } });
+                            document.getElementById("input-image").dispatchEvent(newEvent);
+                        });
+                        resolve(img);
+                    };
+                    reader.onerror = function(e) {
+                        reject(e);
+                    };
+                    reader.readAsDataURL(file);
+                });
             });
 
-            // Process the sorted imageFiles array
-            for (let i = 0; i < imageFiles.length; i++) {
-                const file = imageFiles[i];
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = document.createElement("img");
-                    img.src = e.target.result;
-                    img.height = 100;
-                    img.style.width = 'auto';
-                    img.classList.add("thumbnail");
-                    img.addEventListener("click", function() {
-                        selectThumbnail(img);
-                        var newEvent = new CustomEvent("thumbnailClick", { detail: { file: file } });
-                        document.getElementById("input-image").dispatchEvent(newEvent);
-                    });
-                    $("#thumbnail-container").append(img);
-                };
-                reader.readAsDataURL(file);
+            // Wait for all Promises to resolve and append the images to the thumbnail container
+            try {
+                const images = await Promise.all(imagePromises);
+                images.forEach(img => $("#thumbnail-container").append(img));
+            } catch (error) {
+                console.error("Error loading images:", error);
             }
+            toggleProcessingButtons(false);
+            $("body").removeClass("wait-cursor");
         });
 
 
