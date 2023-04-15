@@ -74,6 +74,7 @@ class SAM_Web_App:
         # load model
         print("Loading model...", end="")
         device = args.device
+        print(f"using {device}...", end="")
         sam = sam_model_registry[args.model_type](checkpoint=args.checkpoint)
         sam.to(device=device)
 

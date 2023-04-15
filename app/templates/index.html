@@ -6,8 +6,8 @@
     <title>Image Processing App</title>
     <style>
         #preview {
-            max-width: 1650px;
-            max-height: 750px;
+            /* max-width: 1650px;
+            max-height: 750px; */
             width: auto;
             cursor: crosshair;
         }
@@ -25,6 +25,27 @@
 
         #zoom-image {
             position: absolute;
+        }
+
+        #image-container {
+            width: 1600px;
+            height: 740px;
+            position: relative;
+            overflow: scroll;
+            display: flex;
+        }
+        /* For Chrome, Edge, and Safari */
+        #image-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+            background-color: #333;
+        }
+        #image-container::-webkit-scrollbar-thumb {
+            background-color: #777;
+            border-radius: 4px;
+        }
+        #image-container::-webkit-scrollbar-corner {
+            background-color: #333;
         }
 
         .crosshair {
@@ -290,7 +311,7 @@
     </div>
     <div id="save-notification" class="notification">Image saved successfully!</div>
 
-    <canvas id="default-preview-canvas" width="1" height="1" style="display: none;"></canvas>
+    <canvas id="default-preview-canvas" width="1600px" height="740px" style="display: none;"></canvas>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
     <script>
@@ -461,6 +482,7 @@
                 var reader = new FileReader();
                 reader.onload = function (e) {
                     const preview = document.getElementById("preview");
+                    const imgContainer = document.getElementById("image-container");
                     $('#preview').attr('src', e.target.result);
                     // Update the zoomImage src when the preview image changes
                     $('#zoom-image').attr('src', e.target.result);
@@ -472,21 +494,8 @@
                         $('#preview').data('originalWidth', this.width);
                         $('#preview').data('originalHeight', this.height);
 
-                        // Calculate the new width and height while maintaining the aspect ratio
-                        const aspectRatio = this.width / this.height;
-                        const maxHeight = parseFloat(getComputedStyle(preview)['max-height']);
-                        const maxWidth = parseFloat(getComputedStyle(preview)['max-width']);
-                        let newHeight = maxHeight;
-                        let newWidth = newHeight * aspectRatio;
-
-                        if (newWidth > maxWidth) {
-                            newWidth = maxWidth;
-                            newHeight = newWidth / aspectRatio;
-                        }
-
-                        // Set the new width and height for the preview image
-                        preview.style.width = newWidth + 'px';
-                        preview.style.height = newHeight + 'px';
+                        // Call resizeImageContainer when the image is loaded
+                        resizeImageContainer(this.width, this.height);
                     }
                 };
                 reader.readAsDataURL(input.files[0]);
@@ -509,6 +518,37 @@
             }
         }
         $("#preview").attr("src", getDefaultDarkImageBase64());
+
+        function resizeImageContainer(originalWidth, originalHeight) {
+            const preview = document.getElementById("preview");
+            const imgContainer = document.getElementById("image-container");
+
+            // Calculate the new width and height while maintaining the aspect ratio
+            const aspectRatio = originalWidth / originalHeight;
+            const maxHeight = window.innerHeight * 0.8;
+            const maxWidth = window.innerWidth * 0.8;
+            let newHeight = maxHeight;
+            let newWidth = newHeight * aspectRatio;
+
+            if (newWidth > maxWidth) {
+                newWidth = maxWidth;
+                newHeight = newWidth / aspectRatio;
+            }
+
+            // Set the new width and height for the preview image
+            preview.style.width = newWidth - 8 + 'px';
+            preview.style.height = newHeight - 8 + 'px';
+            imgContainer.style.width = newWidth + 'px';
+            imgContainer.style.height = newHeight + 'px';
+        }
+        // Call the function whenever the window is resized
+        window.addEventListener('resize', () => {
+            const originalWidth = $('#preview').data('originalWidth');
+            const originalHeight = $('#preview').data('originalHeight');
+            if (originalWidth && originalHeight) {
+                resizeImageContainer(originalWidth, originalHeight);
+            }
+        });
 
         class Deque {
             constructor(maxlen) {
@@ -553,7 +593,7 @@
             }
         }
 
-        const max_deque_len = 1000
+        const max_deque_len = 1000;
         let mode = "p_point"; // Default mode is 'point', 'point'/'box'
         let queue = new Deque(max_deque_len); // Undo / do list
         let trackDataNum = new Deque(max_deque_len);

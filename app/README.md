@@ -28,7 +28,7 @@ https://github.com/derekray311511/SAM-webui.git
 cd SAM-webui; pip install -e .
 ```
 ```bash!
-pip install opencv-python pycocotools matplotlib onnxruntime onnx
+pip install opencv-python pycocotools matplotlib onnxruntime onnx flask flask_cors
 ```
 
 ## Model Checkpoints
@@ -37,8 +37,14 @@ You can download the model checkpoints [here](https://github.com/facebookresearc
 # Run
 
 MODEL_TYPE: `vit_h`, `vit_l`, `vit_b`
+```bash!
+python app.py --model_type vit_h --checkpoint ../models/sam_vit_h_4b8939.pth
+```
 
-- `python app.py --model_type vit_h --checkpoint ../models/sam_vit_h_4b8939.pth`
+If you want to run on cpu, 
+```bash!
+python app.py --model_type vit_h --checkpoint ../models/sam_vit_h_4b8939.pth --device cpu
+```
 
 # Credits
 

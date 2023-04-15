@@ -159,36 +159,18 @@ function handleMouseWheel(e) {
     let newWidth = preview.clientWidth + (e.deltaY < 0 ? 2 : -1) * scaleFactor * preview.clientWidth;
     let newHeight = preview.clientHeight + (e.deltaY < 0 ? 2 : -1) * scaleFactor * preview.clientHeight;
 
-    if (newWidth < 100 || newHeight < 100) {
+    if (newWidth < container.clientWidth || newHeight < container.clientHeight) {
         newWidth = container.clientWidth;
         newHeight = container.clientHeight;
-        return;
     }
 
     // Maintain the aspect ratio
     const aspectRatio = preview.naturalWidth / preview.naturalHeight;
     newHeight = newWidth / aspectRatio;
 
-    // Get the computed style of the preview element and parent elements
-    const previewStyle = getComputedStyle(preview);
-    const maxHeight = parseFloat(previewStyle['max-height']);
-    const maxWidth = parseFloat(previewStyle['max-width']);
-
-    // if exceed the max size, set to max size
-    if (newHeight > maxHeight || newWidth > maxWidth) {
-        // Calculate the new width and height while maintaining the aspect ratio
-        newHeight = maxHeight;
-        newWidth = newHeight * aspectRatio;
-        if (newWidth > maxWidth) {
-            newWidth = maxWidth;
-            newHeight = newWidth / aspectRatio;
-        }
-        console.log("Image set to max size")
-    }
-
     // Update the preview size
-    preview.style.width = `${newWidth}px`;
-    preview.style.height = `${newHeight}px`;
+    preview.style.width = `${newWidth - 4}px`;
+    preview.style.height = `${newHeight - 4}px`;
 
     // Adjust the container scroll position to zoom in/out from the image center
     const centerX = (container.scrollWidth - container.clientWidth) / 2;
@@ -198,7 +180,7 @@ function handleMouseWheel(e) {
     updatePointsAndBoxes();
 }
 
-document.getElementById("preview").addEventListener("wheel", handleMouseWheel);
+document.getElementById("image-container").addEventListener("wheel", handleMouseWheel);
 
 function getScalingFactor(originalWidth, originalHeight, currentWidth, currentHeight) {
     return {
