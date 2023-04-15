@@ -172,15 +172,89 @@ function handleMouseWheel(e) {
     preview.style.width = `${newWidth - 4}px`;
     preview.style.height = `${newHeight - 4}px`;
 
-    // Adjust the container scroll position to zoom in/out from the image center
-    const centerX = (container.scrollWidth - container.clientWidth) / 2;
-    const centerY = (container.scrollHeight - container.clientHeight) / 2;
-    container.scrollLeft = centerX;
-    container.scrollTop = centerY;
+    // Calculate the mouse position relative to the container
+    const rect = container.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Calculate the scroll position before resizing
+    const scrollXBefore = container.scrollLeft + mouseX;
+    const scrollYBefore = container.scrollTop + mouseY;
+
+    // Calculate the new scroll position based on the mouse position
+    const scrollXAfter = scrollXBefore * (newWidth / (newWidth - (e.deltaY < 0 ? 2 : -1) * scaleFactor * preview.clientWidth));
+    const scrollYAfter = scrollYBefore * (newHeight / (newHeight - (e.deltaY < 0 ? 2 : -1) * scaleFactor * preview.clientHeight));
+
+    // Adjust the container scroll position
+    container.scrollLeft = scrollXAfter - mouseX;
+    container.scrollTop = scrollYAfter - mouseY;
     updatePointsAndBoxes();
 }
-
 document.getElementById("image-container").addEventListener("wheel", handleMouseWheel);
+
+// For dragging image to move in the image-container
+let ctrlPressed = false;
+let dragging = false;
+let prevMouseX;
+let prevMouseY;
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Control') {
+        ctrlPressed = true;
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    if (e.key === 'Control') {
+        ctrlPressed = false;
+    }
+});
+
+const container = document.getElementById("image-container");
+container.addEventListener('mousedown', (e) => {
+    if (ctrlPressed) {
+        dragging = true;
+        prevMouseX = e.clientX;
+        prevMouseY = e.clientY;
+        e.preventDefault(); // Prevent other mouse events
+    }
+});
+
+container.addEventListener('mousemove', (e) => {
+    if (dragging) {
+        const deltaX = e.clientX - prevMouseX;
+        const deltaY = e.clientY - prevMouseY;
+        container.scrollLeft -= deltaX;
+        container.scrollTop -= deltaY;
+        prevMouseX = e.clientX;
+        prevMouseY = e.clientY;
+        e.preventDefault(); // Prevent other mouse events
+    }
+});
+
+container.addEventListener('mouseup', (e) => {
+    if (ctrlPressed) {
+        dragging = false;
+        e.preventDefault(); // Prevent other mouse events
+    }
+});
+
+// For the dragging icon
+let isCtrlPressed = false;
+
+$(document).keydown(function(e) {
+    if (e.which === 17) { // 17 is the keyCode for the ctrl key
+        isCtrlPressed = true;
+        $("#preview").css("cursor", "grab");
+    }
+});
+
+$(document).keyup(function(e) {
+    if (e.which === 17) {
+        isCtrlPressed = false;
+        $("#preview").css("cursor", "crosshair");
+    }
+});
 
 function getScalingFactor(originalWidth, originalHeight, currentWidth, currentHeight) {
     return {

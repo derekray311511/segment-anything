@@ -957,6 +957,9 @@
 
         // Point click
         $("#preview").click(function(e) {
+            if (e.ctrlKey) {    // If ctrl is pressed, prevent this event handler from executing
+                return;
+            }
             if (selectedImage === null) {
                 alert("Please select an image first.");
                 return;
@@ -974,6 +977,9 @@
         });
         
         $("#preview").click(function() {
+            if (e.ctrlKey) {    // If ctrl is pressed, prevent this event handler from executing
+                return;
+            }
             if ($('#input-image')[0].files.length === 0 && $("#preview").attr("src") == "#") {
                 $("#input-image").trigger("click");
             }
@@ -1031,6 +1037,9 @@
         }
 
         $("#preview").mousedown(function (e) {
+            if (e.ctrlKey) {    // If ctrl is pressed, prevent this event handler from executing
+                return;
+            }
             if (selectedImage === null) {
                 alert("Please select an image first.");
                 return;
@@ -1048,6 +1057,9 @@
         });
 
         $("#preview").mousemove(function (e) {
+            if (e.ctrlKey) {    // If ctrl is pressed, prevent this event handler from executing
+                return;
+            }
             if (drawing && mode === "box") {
                 const currentX = e.pageX - $(this).offset().left;
                 const currentY = e.pageY - $(this).offset().top;
@@ -1061,6 +1073,9 @@
         });
 
         $("#preview").mouseup(function (e) {
+            if (e.ctrlKey) {    // If ctrl is pressed, prevent this event handler from executing
+                return;
+            }
             var coor_temp;
             if (drawing && mode === "box") {
                 drawing = false;
